@@ -1,15 +1,24 @@
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
+import '../core/game_localization.dart';
 import 'app_router.dart';
 import 'app_sidebar.dart';
 import 'saves_controller.dart';
 
 class SavesScreen extends StatefulWidget {
-  const SavesScreen({super.key, this.controller, this.pickDirectory});
+  const SavesScreen({
+    super.key,
+    this.controller,
+    this.pickDirectory,
+    this.language,
+    this.localizationRepository,
+  });
 
   final SavesController? controller;
   final Future<String?> Function()? pickDirectory;
+  final ValueNotifier<GameLanguage>? language;
+  final GameLocalizationRepository? localizationRepository;
 
   @override
   State<SavesScreen> createState() => _SavesScreenState();
@@ -20,6 +29,11 @@ class _SavesScreenState extends State<SavesScreen> {
   final pathInput = TextEditingController();
   bool choosingFolder = false;
   double _swipeDistance = 0;
+  GameLanguage _language = GameLanguage.russian;
+  GameLocalization _names = const GameLocalization(GameLanguage.russian, {});
+
+  GameLocalizationRepository get _localizationRepository =>
+      widget.localizationRepository ?? GameLocalizationRepository.shared;
 
   bool get busy => controller.busy || choosingFolder;
   Color get accent => Theme.of(context).colorScheme.primary;
@@ -35,10 +49,31 @@ class _SavesScreenState extends State<SavesScreen> {
     super.initState();
     controller = widget.controller ?? SavesController();
     pathInput.text = controller.folder ?? '';
+    _language = widget.language?.value ?? GameLanguage.russian;
+    _names = GameLocalization(_language, const {});
+    widget.language?.addListener(_onLanguageChanged);
+    _loadLocalization();
+  }
+
+  void _onLanguageChanged() {
+    final next = widget.language?.value;
+    if (next == null || next == _language) return;
+    setState(() {
+      _language = next;
+      _names = GameLocalization(next, const {});
+    });
+    _loadLocalization();
+  }
+
+  Future<void> _loadLocalization() async {
+    final requested = _language;
+    final names = await _localizationRepository.load(requested);
+    if (mounted && requested == _language) setState(() => _names = names);
   }
 
   @override
   void dispose() {
+    widget.language?.removeListener(_onLanguageChanged);
     pathInput.dispose();
     if (widget.controller == null) controller.dispose();
     super.dispose();
@@ -331,8 +366,10 @@ class _SavesScreenState extends State<SavesScreen> {
           ? controller.unavailableHeaders.contains(save.path)
                 ? 'Сведения недоступны'
                 : 'Читаем сведения…'
-          : '${header.date.year} · ${header.playerTag} · '
-                '${header.difficulty} · ${shortVersion(header.version)}';
+          : '${header.date.year} · '
+                '${_names.country(header.playerTag, ideology: header.ideology)} '
+                '(${header.playerTag}) · ${_names.name(header.difficulty)} · '
+                '${shortVersion(header.version)}';
       final active = controller.selected?.path == save.path;
       return Material(
         color: active ? const Color(0xFF30372A) : Colors.transparent,
@@ -430,9 +467,13 @@ class _SavesScreenState extends State<SavesScreen> {
               'Игровая дата',
               state.gameDate?.toString() ?? 'Неизвестно',
             ),
-            _stateLine('Страна игрока', state.playerTag ?? 'Неизвестно'),
-            _stateLine('Идеология', state.ideology ?? 'Неизвестно'),
-            _stateLine('Сложность', state.difficulty ?? 'Неизвестно'),
+            _stateLine(
+              'Страна игрока',
+              '${_names.country(state.playerTag, ideology: state.ideology)} '
+                  '(${state.playerTag ?? '—'})',
+            ),
+            _stateLine('Идеология', _names.name(state.ideology)),
+            _stateLine('Сложность', _names.name(state.difficulty)),
             _stateLine('Версия игры', state.gameVersion ?? 'Неизвестно'),
           ],
         ],

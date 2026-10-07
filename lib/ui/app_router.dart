@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
 
+import '../core/game_localization.dart';
 import '../core/world_state.dart';
 import 'app_sidebar.dart';
 import 'saves_controller.dart';
 import 'saves_screen.dart';
+import 'source_screen.dart';
 import 'world_screen.dart';
 
 /// Keeps the app chrome in place while routes animate in the content area.
 class AppRouter extends StatefulWidget {
-  const AppRouter({super.key, this.controller, this.pickDirectory});
+  const AppRouter({
+    super.key,
+    this.controller,
+    this.pickDirectory,
+    this.localizationRepository,
+  });
 
   final SavesController? controller;
   final Future<String?> Function()? pickDirectory;
+  final GameLocalizationRepository? localizationRepository;
 
   static const worldRoute = '/world';
+  static const sourceRoute = '/source';
 
   static Future<void> openWorld(
     BuildContext context,
@@ -26,6 +35,7 @@ class AppRouter extends StatefulWidget {
 
 class _AppRouterState extends State<AppRouter> {
   final _navigatorKey = GlobalKey<NavigatorState>();
+  final _language = ValueNotifier(GameLanguage.russian);
   late final SavesController controller;
 
   @override
@@ -37,6 +47,7 @@ class _AppRouterState extends State<AppRouter> {
   @override
   void dispose() {
     if (widget.controller == null) controller.dispose();
+    _language.dispose();
     super.dispose();
   }
 
@@ -68,13 +79,30 @@ class _AppRouterState extends State<AppRouter> {
         page = SavesScreen(
           controller: controller,
           pickDirectory: widget.pickDirectory,
+          language: _language,
+          localizationRepository: widget.localizationRepository,
         );
       case AppRouter.worldRoute:
         final snapshot = settings.arguments;
         if (snapshot is! WorldStateSnapshot) {
           throw ArgumentError('Для страницы мира требуется снимок сохранения.');
         }
-        page = WorldScreen(snapshot: snapshot);
+        page = WorldScreen(
+          snapshot: snapshot,
+          language: _language,
+          localizationRepository: widget.localizationRepository,
+          onChangeSource: () {
+            _navigatorKey.currentState?.pushNamed<void>(AppRouter.sourceRoute);
+          },
+        );
+      case AppRouter.sourceRoute:
+        page = SourceScreen(
+          language: _language,
+          onSelectFiles: () {
+            controller.clearSelection();
+            _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+          },
+        );
       default:
         throw ArgumentError('Неизвестный маршрут: ${settings.name}');
     }

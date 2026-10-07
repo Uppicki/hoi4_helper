@@ -112,4 +112,37 @@ void main() {
     expect(controller.worldState, isNull);
     expect(controller.previewLoading, isFalse);
   });
+
+  test(
+    'Changing source clears selection and discards pending preview',
+    () async {
+      final repository = TwoSaves();
+      final pending = Completer<WorldStateSnapshot>();
+      final factory = WorldStateSourceFactory(repository: repository);
+      factory.register<SaveFileSourceSettings>(
+        (_) => DeferredSource(pending.future),
+      );
+      final controller = SavesController(
+        repository: repository,
+        sourceFactory: factory,
+      );
+      addTearDown(controller.dispose);
+      await controller.openFolder('folder');
+      controller.select(repository.first);
+      controller.clearSelection();
+      pending.complete(
+        WorldStateSnapshot(
+          sourceDescription: 'Файл сохранения',
+          readAt: DateTime(2026),
+          playerTag: 'GER',
+        ),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(controller.selected, isNull);
+      expect(controller.worldState, isNull);
+      expect(controller.previewLoading, isFalse);
+      expect(controller.saves, isNotEmpty);
+    },
+  );
 }

@@ -1,3 +1,4 @@
+import 'binary_save_world_parser.dart';
 import 'save_repository.dart';
 import 'world_state.dart';
 
@@ -56,6 +57,7 @@ class SaveFileWorldStateSource implements WorldStateSource {
   Future<WorldStateSnapshot> read() async {
     final loaded = await repository.load(save);
     final metadata = BinarySaveHeader.parse(loaded.prefixBytes);
+    final world = await BinarySaveWorldParser.readFile(loaded.file);
     return WorldStateSnapshot(
       sourceDescription: 'Файл сохранения',
       readAt: loaded.loadedAt,
@@ -64,6 +66,7 @@ class SaveFileWorldStateSource implements WorldStateSource {
       ideology: metadata.ideology,
       difficulty: metadata.difficulty,
       gameVersion: metadata.version,
+      world: world,
       loadedSave: loaded,
     );
   }
@@ -110,30 +113,9 @@ class BinarySaveHeader {
       playerTag: player,
       ideology: ideology,
       difficulty: difficulty,
-      date: _decodeDate(dateCode),
+      date: GameDate.fromHoi4Code(dateCode),
       version: version,
     );
-  }
-
-  static GameDate _decodeDate(int code) {
-    // HOI4 binary dates are hours in a 365-day calendar, offset by 5000 years.
-    final hours = code + 1;
-    final year = hours ~/ (365 * 24) - 5000;
-    var dayOfYear = (hours % (365 * 24)) ~/ 24;
-    final hour = hours % 24;
-    if (year < 1 || year > 9999) {
-      throw const SaveReadException('Игровая дата в сохранении не распознана.');
-    }
-    const monthLengths = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-    var month = 1;
-    for (final length in monthLengths) {
-      if (dayOfYear < length) {
-        return GameDate(year, month, dayOfYear + 1, hour);
-      }
-      dayOfYear -= length;
-      month++;
-    }
-    throw const SaveReadException('Игровая дата в сохранении не распознана.');
   }
 }
 

@@ -44,14 +44,18 @@ class AppSidebar extends StatelessWidget {
             const Spacer(),
             const Divider(),
             const SizedBox(height: 12),
-            const Text(
-              'Первый этап',
-              style: TextStyle(fontWeight: FontWeight.w600),
+            Text(
+              controller.worldState == null
+                  ? 'Выбор загрузки'
+                  : 'Состояние мира',
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Выбор и загрузка сохранений',
-              style: TextStyle(color: Color(0xFFA6B1A9), fontSize: 12),
+            Text(
+              controller.worldState == null
+                  ? 'Выберите завершённое сохранение'
+                  : '${controller.worldState?.playerTag ?? '—'} · ${controller.worldState?.gameDate ?? '—'}',
+              style: const TextStyle(color: Color(0xFFA6B1A9), fontSize: 12),
             ),
           ],
         ),

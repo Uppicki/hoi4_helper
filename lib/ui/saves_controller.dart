@@ -47,6 +47,16 @@ class SavesController extends ChangeNotifier {
     unawaited(loadFromSource(SaveFileSourceSettings(value)));
   }
 
+  void clearSelection() {
+    _previewRequest++;
+    selected = null;
+    loaded = null;
+    worldState = null;
+    error = null;
+    previewLoading = false;
+    _notify();
+  }
+
   Future<void> openFolder(String path) async {
     if (busy) return;
     final cleanPath = path.trim();

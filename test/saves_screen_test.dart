@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hoi4_helper/core/game_localization.dart';
 import 'package:hoi4_helper/core/save_repository.dart';
 import 'package:hoi4_helper/core/world_state.dart';
 import 'package:hoi4_helper/core/world_state_source.dart';
@@ -82,7 +83,13 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(useMaterial3: true),
-        home: AppRouter(controller: controller, pickDirectory: picker),
+        home: AppRouter(
+          controller: controller,
+          pickDirectory: picker,
+          localizationRepository: GameLocalizationRepository(
+            gameRoot: r'C:\uninstalled-hoi4',
+          ),
+        ),
       ),
     );
     return controller;
@@ -91,13 +98,13 @@ void main() {
   testWidgets('Selecting a save loads preview and Use opens the world page', (
     tester,
   ) async {
-    await mount(tester, picker: () async => r'C:\saves');
+    final controller = await mount(tester, picker: () async => r'C:\saves');
     expect(find.text('Использовать'), findsNothing);
 
     await tester.tap(find.text('Выбрать папку'));
     await tester.pumpAndSettle();
     expect(find.text('Кампания.hoi4'), findsOneWidget);
-    expect(find.text('1936 · GER · normal · v1.18.0.0'), findsOneWidget);
+    expect(find.text('1936 · GER (GER) · Обычная · v1.18.0.0'), findsOneWidget);
     expect(find.textContaining('Оригинальные файлы остаются'), findsNothing);
     expect(
       tester.getSize(find.byType(ListView).first).height,
@@ -106,21 +113,29 @@ void main() {
     await tester.tap(find.text('Кампания.hoi4'));
     await tester.pumpAndSettle();
     expect(find.text('1936.01.01 15:00'), findsOneWidget);
-    expect(find.text('GER'), findsOneWidget);
-    expect(find.text('fascism'), findsOneWidget);
+    expect(find.text('GER (GER)'), findsOneWidget);
+    expect(find.text('Фашизм'), findsOneWidget);
 
     await tester.ensureVisible(find.text('Использовать'));
     await tester.tap(find.text('Использовать'));
     await tester.pumpAndSettle();
-    expect(find.text('Состояние мира'), findsOneWidget);
-    expect(find.text('Сведения о снимке'), findsOneWidget);
+    expect(find.text('СОСТОЯНИЕ МИРА'), findsOneWidget);
+    expect(find.text('Вооружённые силы'), findsOneWidget);
     expect(find.text('Исследования'), findsOneWidget);
-    await tester.pageBack();
+    await tester.tap(find.byKey(const Key('save-summary')));
     await tester.pumpAndSettle();
+    expect(find.text('Размер'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('change-source')));
+    await tester.pumpAndSettle();
+    expect(find.text('Источник состояния'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('file-source')));
+    await tester.pumpAndSettle();
+    expect(controller.selected, isNull);
+    expect(controller.worldState, isNull);
 
     await tester.tap(find.text('Только просмотр'));
     await tester.pumpAndSettle();
-    expect(find.text('Использовать'), findsOneWidget);
+    expect(find.text('Использовать'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -154,7 +169,11 @@ void main() {
     expect(tester.getTopLeft(world).dx, closeTo(240, 0.1));
     expect(tester.getTopLeft(sidebar), sidebarPosition);
 
-    await tester.pageBack();
+    await tester.timedDragFrom(
+      const Offset(350, 500),
+      const Offset(500, 0),
+      const Duration(milliseconds: 180),
+    );
     await tester.pump();
     final initialReturnX = tester.getTopLeft(world).dx;
     await tester.pump(const Duration(milliseconds: 80));
@@ -184,7 +203,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(WorldScreen), findsOneWidget);
-    expect(find.text('Сведения о снимке'), findsOneWidget);
+    expect(find.text('Вооружённые силы'), findsOneWidget);
 
     await tester.timedDragFrom(
       const Offset(350, 500),
@@ -252,7 +271,36 @@ void main() {
     await tester.ensureVisible(find.text('Использовать'));
     await tester.tap(find.text('Использовать'));
     await tester.pumpAndSettle();
-    expect(find.text('Состояние мира'), findsOneWidget);
+    expect(find.text('СОСТОЯНИЕ МИРА'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Dashboard language can switch while source flow stays usable', (
+    tester,
+  ) async {
+    await mount(tester, picker: () async => r'C:\saves');
+    await tester.tap(find.text('Выбрать папку'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Кампания.hoi4'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Использовать'));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('game-language')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('English').last);
+    await tester.pumpAndSettle();
+    expect(find.text('WORLD STATE'), findsOneWidget);
+    expect(find.text('Armed forces'), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('save-summary')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('change-source')));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose a source'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('file-source')));
+    await tester.pumpAndSettle();
+    expect(find.byType(SavesScreen), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }
