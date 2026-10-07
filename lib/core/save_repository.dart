@@ -37,6 +37,8 @@ class SaveReadException implements Exception {
 
 /// Reads source files without modifying them. Game parsing is a later stage.
 class SaveRepository {
+  static const headerLength = 4096;
+
   Future<List<SaveFile>> list(String folderPath) async {
     final folder = Directory(folderPath);
     if (!await folder.exists()) {
@@ -76,8 +78,8 @@ class SaveRepository {
     final prefix = <int>[];
     await for (final chunk in file.openRead()) {
       bytesRead += chunk.length;
-      if (prefix.length < 4096) {
-        prefix.addAll(chunk.take(4096 - prefix.length));
+      if (prefix.length < headerLength) {
+        prefix.addAll(chunk.take(headerLength - prefix.length));
       }
     }
     final after = await file.stat();
@@ -97,6 +99,32 @@ class SaveRepository {
       loadedAt: DateTime.now(),
       prefixBytes: List<int>.unmodifiable(prefix),
     );
+  }
+
+  /// Reads only the bytes needed for the save-list summary.
+  Future<List<int>> readHeader(SaveFile save) async {
+    final file = File(save.path);
+    final before = await file.stat();
+    if (before.type != FileSystemEntityType.file || before.size == 0) {
+      throw const SaveReadException('Файл сохранения недоступен или пуст.');
+    }
+    final handle = await file.open(mode: FileMode.read);
+    late final List<int> bytes;
+    try {
+      bytes = await handle.read(headerLength);
+    } finally {
+      await handle.close();
+    }
+    final after = await file.stat();
+    if (after.type != FileSystemEntityType.file ||
+        before.size != after.size ||
+        before.modified != after.modified ||
+        before.changed != after.changed) {
+      throw const SaveReadException(
+        'Файл изменился во время чтения. Обновите список.',
+      );
+    }
+    return List<int>.unmodifiable(bytes);
   }
 
   SaveFile _describe(File file, FileStat stat) => SaveFile(

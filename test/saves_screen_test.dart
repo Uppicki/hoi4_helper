@@ -3,8 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoi4_helper/core/save_repository.dart';
 import 'package:hoi4_helper/core/world_state.dart';
 import 'package:hoi4_helper/core/world_state_source.dart';
+import 'package:hoi4_helper/ui/app_router.dart';
 import 'package:hoi4_helper/ui/saves_controller.dart';
 import 'package:hoi4_helper/ui/saves_screen.dart';
+import 'package:hoi4_helper/ui/world_screen.dart';
+
+import 'support/binary_header_fixture.dart';
 
 class MemorySaves extends SaveRepository {
   final file = SaveFile(
@@ -28,6 +32,9 @@ class MemorySaves extends SaveRepository {
     bytesRead: save.size,
     loadedAt: DateTime(2026, 10, 2, 19),
   );
+
+  @override
+  Future<List<int>> readHeader(SaveFile save) async => binaryHeader();
 }
 
 class MemoryWorldSource implements WorldStateSource {
@@ -44,6 +51,8 @@ class MemoryWorldSource implements WorldStateSource {
       readAt: loaded.loadedAt,
       gameDate: const GameDate(1936, 1, 1, 15),
       playerTag: 'GER',
+      ideology: 'fascism',
+      difficulty: 'normal',
       gameVersion: 'v1.18',
       loadedSave: loaded,
     );
@@ -73,40 +82,120 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: ThemeData.dark(useMaterial3: true),
-        home: SavesScreen(controller: controller, pickDirectory: picker),
+        home: AppRouter(controller: controller, pickDirectory: picker),
       ),
     );
     return controller;
   }
 
-  testWidgets(
-    'Pick folder, select and load file; view mode hides analyzer placeholder',
-    (tester) async {
-      await mount(tester, picker: () async => r'C:\saves');
-      final loadButton = find.ancestor(
-        of: find.text('Загрузить сохранение'),
-        matching: find.byWidgetPredicate((widget) => widget is FilledButton),
-      );
-      expect(tester.widget<FilledButton>(loadButton).onPressed, isNull);
+  testWidgets('Selecting a save loads preview and Use opens the world page', (
+    tester,
+  ) async {
+    await mount(tester, picker: () async => r'C:\saves');
+    expect(find.text('Использовать'), findsNothing);
 
-      await tester.tap(find.text('Выбрать папку'));
-      await tester.pumpAndSettle();
-      expect(find.text('Кампания.hoi4'), findsOneWidget);
-      await tester.tap(find.text('Кампания.hoi4'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Загрузить сохранение'));
-      await tester.pumpAndSettle();
-      expect(find.textContaining('Файл прочитан'), findsOneWidget);
-      expect(find.text('1936.01.01 15:00'), findsOneWidget);
-      expect(find.text('GER'), findsOneWidget);
+    await tester.tap(find.text('Выбрать папку'));
+    await tester.pumpAndSettle();
+    expect(find.text('Кампания.hoi4'), findsOneWidget);
+    expect(find.text('1936 · GER · normal · v1.18.0.0'), findsOneWidget);
+    expect(find.textContaining('Оригинальные файлы остаются'), findsNothing);
+    expect(
+      tester.getSize(find.byType(ListView).first).height,
+      greaterThan(340),
+    );
+    await tester.tap(find.text('Кампания.hoi4'));
+    await tester.pumpAndSettle();
+    expect(find.text('1936.01.01 15:00'), findsOneWidget);
+    expect(find.text('GER'), findsOneWidget);
+    expect(find.text('fascism'), findsOneWidget);
 
-      await tester.tap(find.text('Только просмотр'));
-      await tester.pumpAndSettle();
-      expect(find.text('Анализ появится на следующем этапе.'), findsNothing);
-      expect(find.textContaining('Файл прочитан'), findsOneWidget);
-      expect(tester.takeException(), isNull);
-    },
-  );
+    await tester.ensureVisible(find.text('Использовать'));
+    await tester.tap(find.text('Использовать'));
+    await tester.pumpAndSettle();
+    expect(find.text('Состояние мира'), findsOneWidget);
+    expect(find.text('Сведения о снимке'), findsOneWidget);
+    expect(find.text('Исследования'), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Только просмотр'));
+    await tester.pumpAndSettle();
+    expect(find.text('Использовать'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Desktop content slides left while the sidebar remains fixed', (
+    tester,
+  ) async {
+    await mount(tester, picker: () async => r'C:\saves');
+    await tester.tap(find.text('Выбрать папку'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Кампания.hoi4'));
+    await tester.pumpAndSettle();
+
+    final sidebar = find.text('Локальный помощник');
+    expect(sidebar, findsOneWidget);
+    final sidebarPosition = tester.getTopLeft(sidebar);
+
+    await tester.tap(find.text('Использовать'));
+    await tester.pump();
+    final world = find.byType(WorldScreen);
+    expect(world, findsOneWidget);
+    final initialWorldX = tester.getTopLeft(world).dx;
+    expect(tester.getTopLeft(sidebar), sidebarPosition);
+
+    await tester.pump(const Duration(milliseconds: 80));
+    final movingWorldX = tester.getTopLeft(world).dx;
+    expect(movingWorldX, lessThan(initialWorldX));
+    expect(movingWorldX, greaterThan(240));
+    expect(tester.getTopLeft(sidebar), sidebarPosition);
+
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(world).dx, closeTo(240, 0.1));
+    expect(tester.getTopLeft(sidebar), sidebarPosition);
+
+    await tester.pageBack();
+    await tester.pump();
+    final initialReturnX = tester.getTopLeft(world).dx;
+    await tester.pump(const Duration(milliseconds: 80));
+    expect(tester.getTopLeft(world).dx, greaterThan(initialReturnX));
+    expect(tester.getTopLeft(sidebar), sidebarPosition);
+
+    await tester.pumpAndSettle();
+    expect(find.byType(SavesScreen), findsOneWidget);
+    expect(find.text('Использовать'), findsOneWidget);
+    expect(tester.getTopLeft(sidebar), sidebarPosition);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Horizontal swipes navigate between saves and the world', (
+    tester,
+  ) async {
+    await mount(tester, picker: () async => r'C:\saves');
+    await tester.tap(find.text('Выбрать папку'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Кампания.hoi4'));
+    await tester.pumpAndSettle();
+
+    await tester.timedDragFrom(
+      const Offset(900, 500),
+      const Offset(-500, 0),
+      const Duration(milliseconds: 180),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(WorldScreen), findsOneWidget);
+    expect(find.text('Сведения о снимке'), findsOneWidget);
+
+    await tester.timedDragFrom(
+      const Offset(350, 500),
+      const Offset(500, 0),
+      const Duration(milliseconds: 180),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(SavesScreen), findsOneWidget);
+    expect(find.text('Использовать'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'Manual path and missing/empty folders reset the previous selection',
@@ -135,13 +224,10 @@ void main() {
     },
   );
 
-  testWidgets('Cancelling picker preserves folder and loaded save', (
-    tester,
-  ) async {
+  testWidgets('Cancelling picker preserves folder and preview', (tester) async {
     final controller = await mount(tester, picker: () async => null);
     await controller.openFolder(r'C:\saves');
     controller.select(controller.saves.single);
-    await controller.loadSelected();
     await tester.pumpAndSettle();
     final loaded = controller.loaded;
 
@@ -163,10 +249,10 @@ void main() {
     await tester.ensureVisible(find.text('Кампания.hoi4'));
     await tester.tap(find.text('Кампания.hoi4'));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('Загрузить сохранение'));
-    await tester.tap(find.text('Загрузить сохранение'));
+    await tester.ensureVisible(find.text('Использовать'));
+    await tester.tap(find.text('Использовать'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('Файл прочитан'), findsOneWidget);
+    expect(find.text('Состояние мира'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 }

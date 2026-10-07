@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import 'ui/saves_screen.dart';
+import 'ui/app_router.dart';
 
 void main() => runApp(const HoiAssistantApp());
 
@@ -29,7 +29,7 @@ class HoiAssistantApp extends StatelessWidget {
           fillColor: Color(0xFF111715),
         ),
       ),
-      home: const SavesScreen(),
+      home: const AppRouter(),
     );
   }
 }

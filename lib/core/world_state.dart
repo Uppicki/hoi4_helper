@@ -23,6 +23,8 @@ class WorldStateSnapshot {
     required this.readAt,
     this.gameDate,
     this.playerTag,
+    this.ideology,
+    this.difficulty,
     this.gameVersion,
     this.loadedSave,
   });
@@ -31,6 +33,8 @@ class WorldStateSnapshot {
   final DateTime readAt;
   final GameDate? gameDate;
   final String? playerTag;
+  final String? ideology;
+  final String? difficulty;
   final String? gameVersion;
   final LoadedSave? loadedSave;
 }

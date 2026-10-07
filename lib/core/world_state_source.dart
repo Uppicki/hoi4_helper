@@ -61,6 +61,8 @@ class SaveFileWorldStateSource implements WorldStateSource {
       readAt: loaded.loadedAt,
       gameDate: metadata.date,
       playerTag: metadata.playerTag,
+      ideology: metadata.ideology,
+      difficulty: metadata.difficulty,
       gameVersion: metadata.version,
       loadedSave: loaded,
     );
@@ -70,11 +72,15 @@ class SaveFileWorldStateSource implements WorldStateSource {
 class BinarySaveHeader {
   const BinarySaveHeader({
     required this.playerTag,
+    required this.ideology,
+    required this.difficulty,
     required this.date,
     required this.version,
   });
 
   final String playerTag;
+  final String ideology;
+  final String difficulty;
   final GameDate date;
   final String version;
 
@@ -89,9 +95,9 @@ class BinarySaveHeader {
     }
 
     final player = reader.fieldString(0x2A35);
-    reader.fieldString(0x2E3E); // Ideology; not used as player knowledge.
+    final ideology = reader.fieldString(0x2E3E);
     final dateCode = reader.fieldInt32(0x284A);
-    reader.fieldString(0x299F); // Difficulty.
+    final difficulty = reader.fieldString(0x299F);
     final version = reader.fieldString(0x00EE);
 
     if (!RegExp(r'^[A-Z0-9]{3}$').hasMatch(player) ||
@@ -102,6 +108,8 @@ class BinarySaveHeader {
     }
     return BinarySaveHeader(
       playerTag: player,
+      ideology: ideology,
+      difficulty: difficulty,
       date: _decodeDate(dateCode),
       version: version,
     );

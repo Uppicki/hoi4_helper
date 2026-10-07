@@ -56,6 +56,20 @@ void main() {
     },
   );
 
+  test('Reads only the prefix needed for list summaries', () async {
+    final file = File('${folder.path}/sample.hoi4');
+    final bytes = List<int>.generate(160000, (index) => index % 256);
+    await file.writeAsBytes(bytes);
+    final before = await file.stat();
+
+    final prefix = await repository.readHeader(
+      (await repository.list(folder.path)).single,
+    );
+
+    expect(prefix, bytes.take(SaveRepository.headerLength).toList());
+    expect((await file.stat()).modified, before.modified);
+  });
+
   test(
     'Empty folder is valid; missing folder produces a clear error',
     () async {
