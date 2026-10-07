@@ -425,11 +425,28 @@ class _SavesScreenState extends State<SavesScreen> {
               'Файл прочитан · ${date(loaded.loadedAt)}',
               Icons.check_circle_outline,
             ),
-            const SizedBox(height: 10),
-            const Text(
-              'Игровая дата и страна пока не определяются.',
-              style: TextStyle(fontSize: 12, color: Colors.white60),
+          ],
+          if (controller.worldState case final state?) ...[
+            const SizedBox(height: 18),
+            Text(
+              loaded != null ? 'СОСТОЯНИЕ ПО СОХРАНЕНИЮ' : 'СОСТОЯНИЕ МИРА',
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
             ),
+            const SizedBox(height: 12),
+            _stateLine(
+              'Игровая дата',
+              state.gameDate?.toString() ?? 'Неизвестно',
+            ),
+            _stateLine('Страна игрока', state.playerTag ?? 'Неизвестно'),
+            _stateLine('Версия игры', state.gameVersion ?? 'Неизвестно'),
+            _stateLine('Источник', state.sourceDescription),
+            const SizedBox(height: 4),
+            if (loaded != null)
+              const Text(
+                'Пока доступны только данные заголовка. '
+                'Промышленность, армии и другие сведения мира ещё не разбираются.',
+                style: TextStyle(fontSize: 11, color: Colors.white60),
+              ),
           ],
           if (controller.mode == WorkMode.assistant) ...[
             const SizedBox(height: 22),
@@ -461,6 +478,21 @@ class _SavesScreenState extends State<SavesScreen> {
         Icon(icon, size: 18, color: error ? const Color(0xFFFFB4AB) : accent),
         const SizedBox(width: 10),
         Expanded(child: Text(text, style: const TextStyle(fontSize: 12))),
+      ],
+    ),
+  );
+
+  Widget _stateLine(String label, String value) => Padding(
+    padding: const EdgeInsets.only(bottom: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.white60),
+        ),
+        const SizedBox(height: 3),
+        Text(value, style: const TextStyle(fontSize: 13)),
       ],
     ),
   );

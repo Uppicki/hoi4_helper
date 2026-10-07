@@ -3,19 +3,27 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 
 import '../core/save_repository.dart';
+import '../core/world_state.dart';
+import '../core/world_state_source.dart';
 
 enum WorkMode { assistant, viewOnly }
 
 class SavesController extends ChangeNotifier {
-  SavesController({SaveRepository? repository})
-    : _repository = repository ?? SaveRepository();
+  SavesController({
+    SaveRepository? repository,
+    WorldStateSourceFactory? sourceFactory,
+  }) : _repository = repository ?? SaveRepository(),
+       _sourceFactory =
+           sourceFactory ?? WorldStateSourceFactory(repository: repository);
 
   final SaveRepository _repository;
+  final WorldStateSourceFactory _sourceFactory;
   WorkMode mode = WorkMode.assistant;
   String? folder;
   List<SaveFile> saves = [];
   SaveFile? selected;
   LoadedSave? loaded;
+  WorldStateSnapshot? worldState;
   String? error;
   bool busy = false;
   bool _disposed = false;
@@ -29,6 +37,7 @@ class SavesController extends ChangeNotifier {
     if (busy) return;
     selected = value;
     loaded = null;
+    worldState = null;
     error = null;
     _notify();
   }
@@ -47,6 +56,7 @@ class SavesController extends ChangeNotifier {
     saves = [];
     selected = null;
     loaded = null;
+    worldState = null;
     _notify();
     try {
       saves = await _repository.list(cleanPath);
@@ -61,12 +71,20 @@ class SavesController extends ChangeNotifier {
   Future<void> loadSelected() async {
     final save = selected;
     if (save == null || busy) return;
+    await loadFromSource(SaveFileSourceSettings(save));
+  }
+
+  Future<void> loadFromSource(WorldStateSourceSettings settings) async {
+    if (busy) return;
     busy = true;
     error = null;
     loaded = null;
+    worldState = null;
     _notify();
     try {
-      loaded = await _repository.load(save);
+      final snapshot = await _sourceFactory.create(settings).read();
+      loaded = snapshot.loadedSave;
+      worldState = snapshot;
     } catch (exception) {
       error = _message(exception);
     } finally {
@@ -79,7 +97,9 @@ class SavesController extends ChangeNotifier {
     SaveReadException(:final message) => message,
     FileSystemException() =>
       'Не удалось прочитать папку или файл. Проверьте путь и права доступа.',
-    _ => 'Не удалось загрузить сохранения. Попробуйте ещё раз.',
+    UnsupportedError() =>
+      'Выбранный источник состояния пока не поддерживается.',
+    _ => 'Не удалось получить состояние. Попробуйте ещё раз.',
   };
 
   void _notify() {

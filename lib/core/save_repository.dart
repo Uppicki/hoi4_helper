@@ -19,11 +19,15 @@ class LoadedSave {
     required this.file,
     required this.bytesRead,
     required this.loadedAt,
+    this.prefixBytes = const [],
   });
 
   final SaveFile file;
   final int bytesRead;
   final DateTime loadedAt;
+
+  /// A small prefix captured during the same verified read as [bytesRead].
+  final List<int> prefixBytes;
 }
 
 class SaveReadException implements Exception {
@@ -69,8 +73,12 @@ class SaveRepository {
     }
     // Stream instead of retaining potentially large saves in UI memory.
     var bytesRead = 0;
+    final prefix = <int>[];
     await for (final chunk in file.openRead()) {
       bytesRead += chunk.length;
+      if (prefix.length < 4096) {
+        prefix.addAll(chunk.take(4096 - prefix.length));
+      }
     }
     final after = await file.stat();
     if (after.type != FileSystemEntityType.file ||
@@ -87,6 +95,7 @@ class SaveRepository {
       file: _describe(file, after),
       bytesRead: bytesRead,
       loadedAt: DateTime.now(),
+      prefixBytes: List<int>.unmodifiable(prefix),
     );
   }
 

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hoi4_helper/core/save_repository.dart';
+import 'package:hoi4_helper/core/world_state.dart';
+import 'package:hoi4_helper/core/world_state_source.dart';
 import 'package:hoi4_helper/ui/saves_controller.dart';
 import 'package:hoi4_helper/ui/saves_screen.dart';
 
@@ -28,6 +30,26 @@ class MemorySaves extends SaveRepository {
   );
 }
 
+class MemoryWorldSource implements WorldStateSource {
+  MemoryWorldSource(this.file, this.repository);
+
+  final SaveFile file;
+  final SaveRepository repository;
+
+  @override
+  Future<WorldStateSnapshot> read() async {
+    final loaded = await repository.load(file);
+    return WorldStateSnapshot(
+      sourceDescription: 'Файл сохранения',
+      readAt: loaded.loadedAt,
+      gameDate: const GameDate(1936, 1, 1, 15),
+      playerTag: 'GER',
+      gameVersion: 'v1.18',
+      loadedSave: loaded,
+    );
+  }
+}
+
 void main() {
   Future<SavesController> mount(
     WidgetTester tester, {
@@ -38,7 +60,15 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    final controller = SavesController(repository: MemorySaves());
+    final repository = MemorySaves();
+    final factory = WorldStateSourceFactory(repository: repository);
+    factory.register<SaveFileSourceSettings>(
+      (settings) => MemoryWorldSource(settings.save, repository),
+    );
+    final controller = SavesController(
+      repository: repository,
+      sourceFactory: factory,
+    );
     addTearDown(controller.dispose);
     await tester.pumpWidget(
       MaterialApp(
@@ -67,6 +97,8 @@ void main() {
       await tester.tap(find.text('Загрузить сохранение'));
       await tester.pumpAndSettle();
       expect(find.textContaining('Файл прочитан'), findsOneWidget);
+      expect(find.text('1936.01.01 15:00'), findsOneWidget);
+      expect(find.text('GER'), findsOneWidget);
 
       await tester.tap(find.text('Только просмотр'));
       await tester.pumpAndSettle();
@@ -92,6 +124,7 @@ void main() {
       expect(find.text('Папка не найдена. Проверьте путь.'), findsOneWidget);
       expect(controller.selected, isNull);
       expect(controller.loaded, isNull);
+      expect(controller.worldState, isNull);
       expect(find.text('Кампания.hoi4'), findsNothing);
 
       await tester.enterText(find.byType(TextField), 'empty');
