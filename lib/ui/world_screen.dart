@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import '../core/game_localization.dart';
 import '../core/world_state.dart';
 
-/// The loaded world is the primary workspace after selecting a save.
+/// Main dashboard for a completed save or a limited telemetry observation.
 class WorldScreen extends StatefulWidget {
   const WorldScreen({
     super.key,
@@ -13,12 +13,18 @@ class WorldScreen extends StatefulWidget {
     this.localizationRepository,
     this.language,
     this.onChangeSource,
+    this.telemetryMode = false,
+    this.telemetryManpower,
+    this.telemetryReceivedWhileOpen = false,
   });
 
   final WorldStateSnapshot snapshot;
   final GameLocalizationRepository? localizationRepository;
   final ValueNotifier<GameLanguage>? language;
   final VoidCallback? onChangeSource;
+  final bool telemetryMode;
+  final int? telemetryManpower;
+  final bool telemetryReceivedWhileOpen;
 
   @override
   State<WorldScreen> createState() => _WorldScreenState();
@@ -107,7 +113,12 @@ class _WorldScreenState extends State<WorldScreen> {
     bool loadingNames,
   ) {
     final world = widget.snapshot.world;
-    final player = world?.playerCountry(widget.snapshot.playerTag);
+    final player = widget.telemetryMode && widget.snapshot.playerTag != null
+        ? CountryWorldState(
+            tag: widget.snapshot.playerTag!,
+            availableManpower: widget.telemetryManpower,
+          )
+        : world?.playerCountry(widget.snapshot.playerTag);
     final twoColumns = width >= 760;
     final half = twoColumns ? (width - 16) / 2 : width;
     return Column(
@@ -161,7 +172,9 @@ class _WorldScreenState extends State<WorldScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          _ui('СОСТОЯНИЕ МИРА', 'WORLD STATE'),
+          widget.telemetryMode
+              ? _ui('ДАННЫЕ ИЗ ИГРЫ', 'GAME TELEMETRY')
+              : _ui('СОСТОЯНИЕ МИРА', 'WORLD STATE'),
           style: TextStyle(
             color: Theme.of(context).colorScheme.primary,
             fontSize: 11,
@@ -176,13 +189,30 @@ class _WorldScreenState extends State<WorldScreen> {
           '${widget.snapshot.playerTag ?? '—'}  ·  ${widget.snapshot.gameDate?.toString() ?? '—'}',
           style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 16),
         ),
+        if (widget.telemetryMode) ...[
+          const SizedBox(height: 8),
+          Text(
+            widget.telemetryReceivedWhileOpen
+                ? _ui(
+                    'Обновлено после открытия экрана. Данные поступают раз в игровой день.',
+                    'Updated after this screen opened. Data arrives once per game day.',
+                  )
+                : _ui(
+                    'Последняя запись журнала может относиться к прошлой загрузке.',
+                    'The latest log line may belong to an earlier game load.',
+                  ),
+            style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
+          ),
+        ],
         const SizedBox(height: 16),
         Wrap(
           spacing: 8,
           runSpacing: 8,
           children: [
-            _chip(Icons.flag_outlined, names.name(widget.snapshot.ideology)),
-            _chip(Icons.tune, names.name(widget.snapshot.difficulty)),
+            if (!widget.telemetryMode)
+              _chip(Icons.flag_outlined, names.name(widget.snapshot.ideology)),
+            if (!widget.telemetryMode)
+              _chip(Icons.tune, names.name(widget.snapshot.difficulty)),
             if (widget.snapshot.gameVersion case final version?)
               _chip(Icons.extension_outlined, version),
             if (player?.major == true)
@@ -234,6 +264,15 @@ class _WorldScreenState extends State<WorldScreen> {
             ),
           ],
         ),
+        if (widget.telemetryMode) ...[
+          const SizedBox(height: 10),
+          OutlinedButton.icon(
+            key: const Key('change-source-from-telemetry'),
+            onPressed: widget.onChangeSource,
+            icon: const Icon(Icons.swap_horiz),
+            label: Text(_ui('Изменить источник', 'Change source')),
+          ),
+        ],
         const SizedBox(height: 10),
         SizedBox(width: math.min(width, 300), child: _saveMenu(context)),
       ],
@@ -260,7 +299,9 @@ class _WorldScreenState extends State<WorldScreen> {
 
   Widget _saveMenu(BuildContext context) {
     final save = widget.snapshot.loadedSave;
-    final filename = save?.file.name ?? widget.snapshot.sourceDescription;
+    final filename = widget.telemetryMode
+        ? _ui('Телеметрия', 'Telemetry')
+        : save?.file.name ?? widget.snapshot.sourceDescription;
     return Container(
       decoration: _decoration(context),
       child: Column(
@@ -274,7 +315,12 @@ class _WorldScreenState extends State<WorldScreen> {
               padding: const EdgeInsets.all(14),
               child: Row(
                 children: [
-                  const Icon(Icons.save_outlined, size: 20),
+                  Icon(
+                    widget.telemetryMode
+                        ? Icons.sensors_outlined
+                        : Icons.save_outlined,
+                    size: 20,
+                  ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -312,34 +358,45 @@ class _WorldScreenState extends State<WorldScreen> {
                         const Divider(),
                         _detail(
                           _ui('Источник', 'Source'),
-                          save == null
+                          widget.telemetryMode
+                              ? _ui('Телеметрия', 'Telemetry')
+                              : save == null
                               ? widget.snapshot.sourceDescription
                               : _ui('Файл сохранения', 'Save file'),
                         ),
+                        if (!widget.telemetryMode)
+                          _detail(
+                            _ui('Размер', 'Size'),
+                            save == null ? '—' : _size(save.bytesRead),
+                          ),
+                        if (!widget.telemetryMode)
+                          _detail(
+                            _ui('Изменён', 'Modified'),
+                            save == null ? '—' : _date(save.file.modified),
+                          ),
                         _detail(
-                          _ui('Размер', 'Size'),
-                          save == null ? '—' : _size(save.bytesRead),
-                        ),
-                        _detail(
-                          _ui('Изменён', 'Modified'),
-                          save == null ? '—' : _date(save.file.modified),
-                        ),
-                        _detail(
-                          _ui('Прочитан', 'Read'),
-                          _date(widget.snapshot.readAt),
+                          widget.telemetryMode
+                              ? _ui('Журнал прочитан', 'Log read')
+                              : _ui('Прочитан', 'Read'),
+                          widget.telemetryMode &&
+                                  widget.snapshot.gameDate == null
+                              ? '—'
+                              : _date(widget.snapshot.readAt),
                         ),
                         if (widget.snapshot.world?.saveVersion
                             case final version?)
                           _detail(_ui('Формат', 'Format'), version.toString()),
-                        _detail(
-                          _ui('Схема снимка', 'Snapshot schema'),
-                          SnapshotIdentity.schemaVersion.toString(),
-                        ),
-                        _detail(
-                          _ui('ID сохранения', 'Save ID'),
-                          widget.snapshot.identity?.saveId ??
-                              _ui('Неизвестно', 'Unknown'),
-                        ),
+                        if (!widget.telemetryMode)
+                          _detail(
+                            _ui('Схема снимка', 'Snapshot schema'),
+                            SnapshotIdentity.schemaVersion.toString(),
+                          ),
+                        if (!widget.telemetryMode)
+                          _detail(
+                            _ui('ID сохранения', 'Save ID'),
+                            widget.snapshot.identity?.saveId ??
+                                _ui('Неизвестно', 'Unknown'),
+                          ),
                         _detail(
                           _ui('Кампания', 'Campaign'),
                           widget.snapshot.identity?.campaignId ??
@@ -496,6 +553,11 @@ class _WorldScreenState extends State<WorldScreen> {
     Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.telemetryMode)
+          _metricRow(
+            _ui('Армейский резерв', 'Army manpower'),
+            _number(country?.availableManpower),
+          ),
         _metricRow(
           _ui('Людская сила в штатах', 'Manpower in states'),
           _number(country?.stateAvailableManpower),
@@ -510,10 +572,15 @@ class _WorldScreenState extends State<WorldScreen> {
         ),
         const SizedBox(height: 10),
         Text(
-          _ui(
-            'Сырьевые ресурсы и армейский резерв пока не вычисляются из сейва и игровых данных.',
-            'Raw resources and army reserve are not calculated from the save and game data yet.',
-          ),
+          widget.telemetryMode
+              ? _ui(
+                  'Остальные ресурсы мод пока не передаёт.',
+                  'The mod does not report the other resources yet.',
+                )
+              : _ui(
+                  'Сырьевые ресурсы и армейский резерв пока не вычисляются из сейва и игровых данных.',
+                  'Raw resources and army reserve are not calculated from the save and game data yet.',
+                ),
           style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
         ),
       ],
@@ -583,8 +650,12 @@ class _WorldScreenState extends State<WorldScreen> {
     _ui('Специальные проекты', 'Special projects'),
     Text(
       _ui(
-        'Данные о специальных проектах пока не извлекаются из сохранения.',
-        'Special project data is not extracted from the save yet.',
+        widget.telemetryMode
+            ? 'Данные о специальных проектах мод пока не передаёт.'
+            : 'Данные о специальных проектах пока не извлекаются из сохранения.',
+        widget.telemetryMode
+            ? 'The mod does not report special project data yet.'
+            : 'Special project data is not extracted from the save yet.',
       ),
       style: const TextStyle(color: Color(0xFFAAB7AD)),
     ),

@@ -95,6 +95,7 @@ class _AppRouterState extends State<AppRouter> {
           language: _language,
           onChangeSource: _openSources,
           reader: widget.telemetryReader,
+          localizationRepository: widget.localizationRepository,
         );
       case AppRouter.savesRoute:
         page = SavesScreen(
