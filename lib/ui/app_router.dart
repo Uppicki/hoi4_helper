@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
+import '../core/telemetry_log.dart';
 import '../core/world_state.dart';
 import 'app_sidebar.dart';
 import 'saves_controller.dart';
 import 'saves_screen.dart';
 import 'source_screen.dart';
+import 'telemetry_screen.dart';
 import 'world_screen.dart';
 
 /// Keeps the app chrome in place while routes animate in the content area.
@@ -15,14 +17,19 @@ class AppRouter extends StatefulWidget {
     this.controller,
     this.pickDirectory,
     this.localizationRepository,
+    this.initialRoute = Navigator.defaultRouteName,
+    this.telemetryReader,
   });
 
   final SavesController? controller;
   final Future<String?> Function()? pickDirectory;
   final GameLocalizationRepository? localizationRepository;
+  final String initialRoute;
+  final TelemetryLogReader? telemetryReader;
 
   static const worldRoute = '/world';
   static const sourceRoute = '/source';
+  static const savesRoute = '/saves';
 
   static Future<void> openWorld(
     BuildContext context,
@@ -63,7 +70,11 @@ class _AppRouterState extends State<AppRouter> {
               if (showSidebar)
                 SizedBox(width: 240, child: AppSidebar(controller: controller)),
               Expanded(
-                child: Navigator(key: _navigatorKey, onGenerateRoute: _route),
+                child: Navigator(
+                  key: _navigatorKey,
+                  initialRoute: widget.initialRoute,
+                  onGenerateRoute: _route,
+                ),
               ),
             ],
           );
@@ -72,15 +83,26 @@ class _AppRouterState extends State<AppRouter> {
     ),
   );
 
+  void _openSources() {
+    _navigatorKey.currentState?.pushNamed<void>(AppRouter.sourceRoute);
+  }
+
   Route<void> _route(RouteSettings settings) {
     final Widget page;
     switch (settings.name) {
       case Navigator.defaultRouteName:
+        page = TelemetryScreen(
+          language: _language,
+          onChangeSource: _openSources,
+          reader: widget.telemetryReader,
+        );
+      case AppRouter.savesRoute:
         page = SavesScreen(
           controller: controller,
           pickDirectory: widget.pickDirectory,
           language: _language,
           localizationRepository: widget.localizationRepository,
+          onChangeSource: _openSources,
         );
       case AppRouter.worldRoute:
         final snapshot = settings.arguments;
@@ -91,16 +113,19 @@ class _AppRouterState extends State<AppRouter> {
           snapshot: snapshot,
           language: _language,
           localizationRepository: widget.localizationRepository,
-          onChangeSource: () {
-            _navigatorKey.currentState?.pushNamed<void>(AppRouter.sourceRoute);
-          },
+          onChangeSource: _openSources,
         );
       case AppRouter.sourceRoute:
         page = SourceScreen(
           language: _language,
+          onSelectTelemetry: () {
+            _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+          },
           onSelectFiles: () {
             controller.clearSelection();
-            _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+            final navigator = _navigatorKey.currentState;
+            navigator?.popUntil((route) => route.isFirst);
+            navigator?.pushNamed<void>(AppRouter.savesRoute);
           },
         );
       default:

@@ -1,0 +1,10 @@
+on_actions = {
+    on_daily = {
+        effect = {
+            if = {
+                limit = { is_ai = no }
+                log = "HOI4_HELPER_V1|date=[GetDateText]|tag=[ROOT.GetTag]|manpower=[ROOT.GetManpower]"
+            }
+        }
+    }
+}

@@ -46,14 +46,14 @@ class AppSidebar extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               controller.worldState == null
-                  ? 'Выбор загрузки'
+                  ? 'Источники данных'
                   : 'Состояние мира',
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
             Text(
               controller.worldState == null
-                  ? 'Выберите завершённое сохранение'
+                  ? 'Телеметрия или сохранение'
                   : '${controller.worldState?.playerTag ?? '—'} · ${controller.worldState?.gameDate ?? '—'}',
               style: const TextStyle(color: Color(0xFFA6B1A9), fontSize: 12),
             ),

@@ -1,7 +1,10 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hoi4_helper/core/game_localization.dart';
 import 'package:hoi4_helper/core/save_repository.dart';
+import 'package:hoi4_helper/core/telemetry_log.dart';
 import 'package:hoi4_helper/core/world_state.dart';
 import 'package:hoi4_helper/core/world_state_source.dart';
 import 'package:hoi4_helper/ui/app_router.dart';
@@ -85,6 +88,8 @@ void main() {
         theme: ThemeData.dark(useMaterial3: true),
         home: AppRouter(
           controller: controller,
+          initialRoute: AppRouter.savesRoute,
+          telemetryReader: TelemetryLogReader(File('missing-telemetry.log')),
           pickDirectory: picker,
           localizationRepository: GameLocalizationRepository(
             gameRoot: r'C:\uninstalled-hoi4',
@@ -127,7 +132,7 @@ void main() {
     expect(find.text('Размер'), findsOneWidget);
     await tester.tap(find.byKey(const Key('change-source')));
     await tester.pumpAndSettle();
-    expect(find.text('Источник состояния'), findsOneWidget);
+    expect(find.text('Источники данных'), findsOneWidget);
     await tester.tap(find.byKey(const Key('file-source')));
     await tester.pumpAndSettle();
     expect(controller.selected, isNull);
