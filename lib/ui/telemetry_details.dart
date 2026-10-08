@@ -20,10 +20,48 @@ class TelemetryDetails extends StatelessWidget {
   bool get _ru => language == GameLanguage.russian;
   String _label(String ru, String en) => _ru ? ru : en;
 
-  String _format(String key) {
-    final value = observation.value(key);
+  String _statusLabel(TelemetryValueStatus status) => switch (status) {
+    TelemetryValueStatus.value => _label('значение', 'value'),
+    TelemetryValueStatus.missing => _label('отсутствует', 'missing'),
+    TelemetryValueStatus.unsupported => _label(
+      'не поддерживается',
+      'unsupported',
+    ),
+    TelemetryValueStatus.invalid => _label('ошибка строки', 'invalid line'),
+  };
+
+  String _explanation(String key) {
     final metric = telemetryMetrics[key];
-    if (value == null || metric == null) return '—';
+    if (metric == null) {
+      return _label('Неизвестный показатель', 'Unknown metric');
+    }
+    return _label(
+      'Статус: ${_statusLabel(observation.status(key))}. '
+          'Источник: переменная страны ${metric.variable} из мода V${observation.schemaVersion}. '
+          'Единица: ${metric.unitRu}. Область: ${metric.domain.descriptionRu}. '
+          'Игровая дата: ${observation.gameDate}.',
+      'Status: ${_statusLabel(observation.status(key))}. '
+          'Source: country variable ${metric.variable} from mod V${observation.schemaVersion}. '
+          'Unit: ${metric.unitEn}. Domain: ${metric.domain.descriptionEn}. '
+          'Game date: ${observation.gameDate}.',
+    );
+  }
+
+  String _format(String key) {
+    final metric = telemetryMetrics[key];
+    if (metric == null) return '—';
+    switch (observation.status(key)) {
+      case TelemetryValueStatus.missing:
+        return '—';
+      case TelemetryValueStatus.unsupported:
+        return _label('Не поддерживается', 'Unsupported');
+      case TelemetryValueStatus.invalid:
+        return _label('Ошибка', 'Invalid');
+      case TelemetryValueStatus.value:
+        break;
+    }
+    final value = observation.value(key);
+    if (value == null) return '—';
     switch (metric.format) {
       case TelemetryFormat.count:
         return value.round().toString().replaceAllMapped(
@@ -56,7 +94,10 @@ class TelemetryDetails extends StatelessWidget {
     final entries = telemetryScalars
         .where(
           (metric) =>
-              metric.group == group && observation.value(metric.key) != null,
+              metric.group == group &&
+              (observation.status(metric.key) == TelemetryValueStatus.value ||
+                  observation.status(metric.key) ==
+                      TelemetryValueStatus.invalid),
         )
         .toList();
     if (entries.isEmpty) return const SizedBox.shrink();
@@ -70,7 +111,18 @@ class TelemetryDetails extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 5),
               child: Row(
                 children: [
-                  Expanded(child: Text(_ru ? metric.ru : metric.en)),
+                  Expanded(
+                    child: Tooltip(
+                      message: _explanation(metric.key),
+                      child: Row(
+                        children: [
+                          Flexible(child: Text(_ru ? metric.ru : metric.en)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.info_outline, size: 14),
+                        ],
+                      ),
+                    ),
+                  ),
                   const SizedBox(width: 12),
                   Text(_format(metric.key)),
                 ],
@@ -107,7 +159,11 @@ class TelemetryDetails extends StatelessWidget {
     final rows = items
         .where(
           (item) => columns.any(
-            (column) => observation.value(key(item, column.$1)) != null,
+            (column) =>
+                observation.status(key(item, column.$1)) ==
+                    TelemetryValueStatus.value ||
+                observation.status(key(item, column.$1)) ==
+                    TelemetryValueStatus.invalid,
           ),
         )
         .toList();
@@ -139,7 +195,12 @@ class TelemetryDetails extends StatelessWidget {
                     ),
                   ),
                   for (final column in columns)
-                    DataCell(Text(_format(key(item, column.$1)))),
+                    DataCell(
+                      Tooltip(
+                        message: _explanation(key(item, column.$1)),
+                        child: Text(_format(key(item, column.$1))),
+                      ),
+                    ),
                 ],
               ),
           ],
@@ -175,8 +236,8 @@ class TelemetryDetails extends StatelessWidget {
         const SizedBox(height: 6),
         Text(
           _label(
-            'Показатели получены на указанную выше игровую дату. Неизвестные значения показаны прочерком.',
-            'Values were received on the game date above. Unknown values are shown as dashes.',
+            'Все значения относятся к игровой дате выше. Наведите на показатель для его источника, единицы и области значений. Прочерк — поле отсутствует; «Ошибка» — неверное значение; ноль — измеренный ноль.',
+            'All values belong to the game date above. Hover over a metric for its source, unit and range. A dash means missing; Invalid means a bad value; zero is a measured zero.',
           ),
           style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
         ),

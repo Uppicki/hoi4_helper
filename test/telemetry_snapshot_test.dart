@@ -21,6 +21,23 @@ void main() {
     expect(snapshot.loadedSave, isNull);
   });
 
+  test('display snapshot uses receipt and source attached to observation', () {
+    final receivedAt = DateTime(2026, 10, 8, 21, 15);
+    final snapshot = telemetryDisplaySnapshot(
+      TelemetryObservation(
+        gameDate: '1936.01.02.02',
+        playerTag: 'ALB',
+        manpower: 5562,
+        receivedAt: receivedAt,
+        logSource: r'C:\logs\game.log',
+      ),
+      readAt: DateTime(2026, 10, 8, 22),
+    );
+    expect(snapshot.readAt, receivedAt);
+    expect(snapshot.sourceDescription, r'C:\logs\game.log');
+    expect(snapshot.identity, isNull);
+  });
+
   test('invalid telemetry dates remain unknown', () {
     expect(parseTelemetryGameDate('1936.02.29.02'), isNull);
     expect(parseTelemetryGameDate('1936.01.02.24'), isNull);

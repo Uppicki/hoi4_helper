@@ -191,7 +191,7 @@ class _WorldScreenState extends State<WorldScreen> {
       children: [
         Text(
           widget.telemetryMode
-              ? _ui('ДАННЫЕ ИЗ ИГРЫ', 'GAME TELEMETRY')
+              ? _ui('НАБЛЮДЕНИЕ МОДА', 'MOD OBSERVATION')
               : _ui('СОСТОЯНИЕ МИРА', 'WORLD STATE'),
           style: TextStyle(
             color: Theme.of(context).colorScheme.primary,
@@ -392,15 +392,48 @@ class _WorldScreenState extends State<WorldScreen> {
                             _ui('Изменён', 'Modified'),
                             save == null ? '—' : _date(save.file.modified),
                           ),
+                        if (widget.telemetryMode)
+                          _detail(
+                            _ui('Путь журнала', 'Log path'),
+                            widget.telemetry?.logSource ?? '—',
+                          ),
                         _detail(
                           widget.telemetryMode
-                              ? _ui('Журнал прочитан', 'Log read')
+                              ? _ui('Получено приложением', 'Received by app')
                               : _ui('Прочитан', 'Read'),
-                          widget.telemetryMode &&
-                                  widget.snapshot.gameDate == null
+                          widget.telemetryMode && widget.telemetry == null
                               ? '—'
                               : _date(widget.snapshot.readAt),
                         ),
+                        if (widget.telemetryMode &&
+                            widget.telemetry != null) ...[
+                          _detail(
+                            _ui('Дата и страна', 'Date and country'),
+                            _ui(
+                              'Игровая дата из префикса game.log; страна из [ROOT.GetTag].',
+                              'Game date from the game.log prefix; country from [ROOT.GetTag].',
+                            ),
+                          ),
+                          _detail(
+                            _ui('Армейский резерв', 'Army manpower'),
+                            _ui(
+                              '[ROOT.GetManpower] в записи мода, человек.',
+                              '[ROOT.GetManpower] in the mod record, people.',
+                            ),
+                          ),
+                        ],
+                        if (widget.telemetryMode) ...[
+                          _detail(
+                            _ui('Формат записи мода', 'Mod record format'),
+                            widget.telemetry?.schemaVersion.toString() ?? '—',
+                          ),
+                          _detail(
+                            _ui('Схема наблюдения', 'Observation schema'),
+                            widget.telemetry?.observationSchemaVersion
+                                    .toString() ??
+                                '—',
+                          ),
+                        ],
                         if (widget.snapshot.world?.saveVersion
                             case final version?)
                           _detail(_ui('Формат', 'Format'), version.toString()),
@@ -909,7 +942,10 @@ class _WorldScreenState extends State<WorldScreen> {
           style: const TextStyle(fontSize: 12, color: Color(0xFFAAB7AD)),
         ),
         const SizedBox(height: 2),
-        Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
+        Tooltip(
+          message: value,
+          child: Text(value, maxLines: 2, overflow: TextOverflow.ellipsis),
+        ),
       ],
     ),
   );

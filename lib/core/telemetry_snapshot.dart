@@ -8,8 +8,8 @@ WorldStateSnapshot telemetryDisplaySnapshot(
   required DateTime readAt,
 }) {
   return WorldStateSnapshot(
-    sourceDescription: 'Телеметрия',
-    readAt: readAt,
+    sourceDescription: observation?.logSource ?? 'Телеметрия',
+    readAt: observation?.receivedAt ?? readAt,
     gameDate: observation == null
         ? null
         : parseTelemetryGameDate(observation.gameDate),
