@@ -3,6 +3,8 @@ import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
+import 'package:crypto/crypto.dart';
+
 import 'save_repository.dart';
 import 'world_state.dart';
 
@@ -15,8 +17,9 @@ class BinarySaveWorldParser {
   static const supportedSaveVersions = {31};
 
   static Future<SaveWorldDetails> readFile(
-    SaveFile save,
-  ) => Isolate.run(() async {
+    SaveFile save, {
+    String? expectedSha256,
+  }) => Isolate.run(() async {
     final file = File(save.path);
     final before = await file.stat();
     if (before.type != FileSystemEntityType.file ||
@@ -35,6 +38,12 @@ class BinarySaveWorldParser {
         bytes.length != after.size) {
       throw const SaveReadException(
         'Сохранение изменилось во время разбора. Загрузите его снова.',
+      );
+    }
+    if (expectedSha256 != null &&
+        sha256.convert(bytes).toString() != expectedSha256) {
+      throw const SaveReadException(
+        'Сохранение изменилось между чтением и разбором. Загрузите его снова.',
       );
     }
     return BinarySaveWorldParser.parse(bytes);

@@ -57,7 +57,10 @@ class SaveFileWorldStateSource implements WorldStateSource {
   Future<WorldStateSnapshot> read() async {
     final loaded = await repository.load(save);
     final metadata = BinarySaveHeader.parse(loaded.prefixBytes);
-    final world = await BinarySaveWorldParser.readFile(loaded.file);
+    final world = await BinarySaveWorldParser.readFile(
+      loaded.file,
+      expectedSha256: loaded.contentSha256,
+    );
     return WorldStateSnapshot(
       sourceDescription: 'Файл сохранения',
       readAt: loaded.loadedAt,
@@ -68,6 +71,13 @@ class SaveFileWorldStateSource implements WorldStateSource {
       gameVersion: metadata.version,
       world: world,
       loadedSave: loaded,
+      identity: SnapshotIdentity(
+        sourceId: loaded.file.path,
+        saveId: loaded.contentSha256,
+        playerTag: metadata.playerTag,
+        gameDate: metadata.date,
+        gameVersion: metadata.version,
+      ),
     );
   }
 }

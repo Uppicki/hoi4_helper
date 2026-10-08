@@ -331,6 +331,20 @@ class _WorldScreenState extends State<WorldScreen> {
                         if (widget.snapshot.world?.saveVersion
                             case final version?)
                           _detail(_ui('Формат', 'Format'), version.toString()),
+                        _detail(
+                          _ui('Схема снимка', 'Snapshot schema'),
+                          SnapshotIdentity.schemaVersion.toString(),
+                        ),
+                        _detail(
+                          _ui('ID сохранения', 'Save ID'),
+                          widget.snapshot.identity?.saveId ??
+                              _ui('Неизвестно', 'Unknown'),
+                        ),
+                        _detail(
+                          _ui('Кампания', 'Campaign'),
+                          widget.snapshot.identity?.campaignId ??
+                              _ui('Не установлена', 'Unknown'),
+                        ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           key: const Key('change-source'),

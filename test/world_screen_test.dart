@@ -81,6 +81,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('1,0 КБ'), findsNothing);
     expect(find.text('1.0 КБ'), findsOneWidget);
+    expect(find.text('Схема снимка'), findsOneWidget);
+    expect(find.text('Не установлена'), findsOneWidget);
     expect(find.byKey(const Key('change-source')), findsOneWidget);
 
     await tester.tap(find.byKey(const Key('game-language')));

@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
+
 class SaveFile {
   const SaveFile({
     required this.path,
@@ -20,6 +22,7 @@ class LoadedSave {
     required this.bytesRead,
     required this.loadedAt,
     this.prefixBytes = const [],
+    this.contentSha256,
   });
 
   final SaveFile file;
@@ -28,6 +31,9 @@ class LoadedSave {
 
   /// A small prefix captured during the same verified read as [bytesRead].
   final List<int> prefixBytes;
+
+  /// Digest of the complete file read, independent of its path or timestamp.
+  final String? contentSha256;
 }
 
 class SaveReadException implements Exception {
@@ -76,12 +82,17 @@ class SaveRepository {
     // Stream instead of retaining potentially large saves in UI memory.
     var bytesRead = 0;
     final prefix = <int>[];
-    await for (final chunk in file.openRead()) {
-      bytesRead += chunk.length;
-      if (prefix.length < headerLength) {
-        prefix.addAll(chunk.take(headerLength - prefix.length));
-      }
-    }
+    final digest = await sha256
+        .bind(
+          file.openRead().map((chunk) {
+            bytesRead += chunk.length;
+            if (prefix.length < headerLength) {
+              prefix.addAll(chunk.take(headerLength - prefix.length));
+            }
+            return chunk;
+          }),
+        )
+        .single;
     final after = await file.stat();
     if (after.type != FileSystemEntityType.file ||
         before.size != after.size ||
@@ -98,6 +109,7 @@ class SaveRepository {
       bytesRead: bytesRead,
       loadedAt: DateTime.now(),
       prefixBytes: List<int>.unmodifiable(prefix),
+      contentSha256: digest.toString(),
     );
   }
 

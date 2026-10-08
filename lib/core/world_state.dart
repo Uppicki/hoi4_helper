@@ -1,7 +1,7 @@
 import 'save_repository.dart';
 
 /// The in-game date represented by a completed save, not the current wall time.
-class GameDate {
+class GameDate implements Comparable<GameDate> {
   const GameDate(this.year, this.month, this.day, this.hour);
 
   static GameDate fromHoi4Code(int code) {
@@ -30,9 +30,70 @@ class GameDate {
   final int hour;
 
   @override
+  int compareTo(GameDate other) {
+    final byYear = year.compareTo(other.year);
+    if (byYear != 0) return byYear;
+    final byMonth = month.compareTo(other.month);
+    if (byMonth != 0) return byMonth;
+    final byDay = day.compareTo(other.day);
+    return byDay != 0 ? byDay : hour.compareTo(other.hour);
+  }
+
+  @override
   String toString() {
     String two(int value) => value.toString().padLeft(2, '0');
     return '$year.${two(month)}.${two(day)} ${two(hour)}:00';
+  }
+}
+
+/// Versioned identity of one completed save. Null means no reliable evidence.
+class SnapshotIdentity {
+  const SnapshotIdentity({
+    required this.sourceId,
+    required this.saveId,
+    required this.playerTag,
+    required this.gameDate,
+    required this.gameVersion,
+    this.campaignId,
+    this.gameDataId,
+  });
+
+  static const schemaVersion = 1;
+
+  /// Absolute source path for file-backed snapshots.
+  final String? sourceId;
+
+  /// SHA-256 of the entire save, not its filename or modification time.
+  final String? saveId;
+
+  /// Only set when a campaign identifier is verified from source data.
+  final String? campaignId;
+  final String? playerTag;
+  final GameDate? gameDate;
+  final String? gameVersion;
+
+  /// Identity of installed game data and enabled mods, when verified.
+  final String? gameDataId;
+
+  /// A successor must have positive evidence of a shared campaign and data.
+  /// This deliberately rejects unknown campaign identities.
+  bool canFollow(SnapshotIdentity previous) {
+    if (campaignId == null ||
+        previous.campaignId == null ||
+        campaignId != previous.campaignId ||
+        playerTag == null ||
+        playerTag != previous.playerTag ||
+        gameDataId == null ||
+        gameDataId != previous.gameDataId ||
+        gameVersion == null ||
+        gameVersion != previous.gameVersion ||
+        gameDate == null ||
+        previous.gameDate == null ||
+        saveId == null ||
+        saveId == previous.saveId) {
+      return false;
+    }
+    return gameDate!.compareTo(previous.gameDate!) > 0;
   }
 }
 
@@ -48,6 +109,7 @@ class WorldStateSnapshot {
     this.gameVersion,
     this.world,
     this.loadedSave,
+    this.identity,
   });
 
   final String sourceDescription;
@@ -59,6 +121,7 @@ class WorldStateSnapshot {
   final String? gameVersion;
   final SaveWorldDetails? world;
   final LoadedSave? loadedSave;
+  final SnapshotIdentity? identity;
 }
 
 /// Facts extracted from a completed save. Missing values stay null.
