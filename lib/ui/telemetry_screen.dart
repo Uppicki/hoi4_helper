@@ -83,6 +83,7 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
     snapshot: telemetryDisplaySnapshot(_observation, readAt: _readAt),
     telemetryMode: true,
     telemetryManpower: _observation?.manpower,
+    telemetry: _observation,
     telemetryReceivedWhileOpen: _receivedWhileOpen,
     language: widget.language,
     localizationRepository: widget.localizationRepository,

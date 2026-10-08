@@ -3,6 +3,9 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
+import '../core/telemetry_log.dart';
+import '../core/telemetry_snapshot.dart';
+import 'telemetry_details.dart';
 import '../core/world_state.dart';
 
 /// Main dashboard for a completed save or a limited telemetry observation.
@@ -15,6 +18,7 @@ class WorldScreen extends StatefulWidget {
     this.onChangeSource,
     this.telemetryMode = false,
     this.telemetryManpower,
+    this.telemetry,
     this.telemetryReceivedWhileOpen = false,
   });
 
@@ -24,6 +28,7 @@ class WorldScreen extends StatefulWidget {
   final VoidCallback? onChangeSource;
   final bool telemetryMode;
   final int? telemetryManpower;
+  final TelemetryObservation? telemetry;
   final bool telemetryReceivedWhileOpen;
 
   @override
@@ -113,11 +118,14 @@ class _WorldScreenState extends State<WorldScreen> {
     bool loadingNames,
   ) {
     final world = widget.snapshot.world;
-    final player = widget.telemetryMode && widget.snapshot.playerTag != null
-        ? CountryWorldState(
-            tag: widget.snapshot.playerTag!,
-            availableManpower: widget.telemetryManpower,
-          )
+    final player = widget.telemetryMode
+        ? telemetryDisplayCountry(widget.telemetry) ??
+              (widget.snapshot.playerTag == null
+                  ? null
+                  : CountryWorldState(
+                      tag: widget.snapshot.playerTag!,
+                      availableManpower: widget.telemetryManpower,
+                    ))
         : world?.playerCountry(widget.snapshot.playerTag);
     final twoColumns = width >= 760;
     final half = twoColumns ? (width - 16) / 2 : width;
@@ -133,8 +141,10 @@ class _WorldScreenState extends State<WorldScreen> {
           ),
         ],
         const SizedBox(height: 24),
-        _worldSummary(world),
-        const SizedBox(height: 24),
+        if (!widget.telemetryMode) ...[
+          _worldSummary(world),
+          const SizedBox(height: 24),
+        ],
         Text(
           _ui('Состояние страны', 'Country dashboard'),
           style: Theme.of(context).textTheme.headlineSmall,
@@ -153,6 +163,14 @@ class _WorldScreenState extends State<WorldScreen> {
             SizedBox(width: half, child: _map(context, names, world)),
           ],
         ),
+        if (widget.telemetry case final observation?) ...[
+          const SizedBox(height: 24),
+          TelemetryDetails(
+            observation: observation,
+            names: names,
+            language: _language,
+          ),
+        ],
         const SizedBox(height: 24),
       ],
     );
@@ -496,6 +514,11 @@ class _WorldScreenState extends State<WorldScreen> {
               child: _forceCard(Icons.sailing_outlined, _ui('Флот', 'Navy'), [
                 _pair(_ui('Флоты', 'Fleets'), _number(country?.fleetCount)),
                 _pair(_ui('Корабли', 'Ships'), _number(country?.shipCount)),
+                if (widget.telemetryMode)
+                  _pair(
+                    _ui('Опыт флота', 'Navy experience'),
+                    _decimal(widget.telemetry?.value('navy_xp')),
+                  ),
               ]),
             ),
             SizedBox(
@@ -505,6 +528,11 @@ class _WorldScreenState extends State<WorldScreen> {
                 _ui('Авиация', 'Air force'),
                 [
                   _pair(_ui('Авиакрылья', 'Air wings'), '—'),
+                  if (widget.telemetryMode)
+                    _pair(
+                      _ui('Самолёты', 'Aircraft'),
+                      _number(widget.telemetry?.count('planes')),
+                    ),
                   _pair(
                     _ui('Опыт авиации', 'Air experience'),
                     _decimal(country?.airExperience),
@@ -533,6 +561,21 @@ class _WorldScreenState extends State<WorldScreen> {
           _number(country?.militaryFactories),
         ),
         _metricRow(_ui('Верфи', 'Dockyards'), _number(country?.dockyards)),
+        if (widget.telemetryMode) ...[
+          const Divider(height: 20),
+          _metricRow(
+            _ui('Доступные фабрики', 'Available civilian factories'),
+            _number(widget.telemetry?.count('available_civ')),
+          ),
+          _metricRow(
+            _ui('Доступные военные заводы', 'Available military factories'),
+            _number(widget.telemetry?.count('available_mil')),
+          ),
+          _metricRow(
+            _ui('Доступные верфи', 'Available dockyards'),
+            _number(widget.telemetry?.count('available_dock')),
+          ),
+        ],
         const Divider(height: 26),
         _metricRow(
           _ui('Военные линии', 'Military lines'),
@@ -570,12 +613,21 @@ class _WorldScreenState extends State<WorldScreen> {
           _ui('Командный ресурс', 'Command power'),
           _decimal(country?.commandPower),
         ),
+        if (widget.telemetryMode)
+          _metricRow(
+            _ui('Топливо, тыс.', 'Fuel, thousands'),
+            _decimal(widget.telemetry?.value('fuel')),
+          ),
         const SizedBox(height: 10),
         Text(
           widget.telemetryMode
               ? _ui(
-                  'Остальные ресурсы мод пока не передаёт.',
-                  'The mod does not report the other resources yet.',
+                  widget.telemetry?.schemaVersion == 2
+                      ? 'Баланс сырья, запасы и потребности снаряжения показаны ниже.'
+                      : 'Остальные ресурсы мод пока не передаёт.',
+                  widget.telemetry?.schemaVersion == 2
+                      ? 'Resource balance and equipment stockpiles are shown below.'
+                      : 'The mod does not report the other resources yet.',
                 )
               : _ui(
                   'Сырьевые ресурсы и армейский резерв пока не вычисляются из сейва и игровых данных.',
@@ -628,6 +680,11 @@ class _WorldScreenState extends State<WorldScreen> {
           _ui('Ячейки исследований', 'Research slots'),
           _number(country?.researchSlots),
         ),
+        if (widget.telemetryMode)
+          _metricRow(
+            _ui('Изучено технологий', 'Researched technologies'),
+            _number(widget.telemetry?.count('researched_count')),
+          ),
         const SizedBox(height: 6),
         _codeList(
           _ui('Активные', 'Active'),
@@ -681,7 +738,11 @@ class _WorldScreenState extends State<WorldScreen> {
         children: [
           _metricRow(
             _ui('Штаты страны', 'Owned states'),
-            _number(world?.ownedStateCounts[playerTag]),
+            _number(
+              widget.telemetryMode
+                  ? widget.telemetry?.count('owned_states')
+                  : world?.ownedStateCounts[playerTag],
+            ),
           ),
           _metricRow(
             _ui('Столица', 'Capital'),
