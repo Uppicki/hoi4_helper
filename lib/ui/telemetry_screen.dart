@@ -33,7 +33,6 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
   Timer? _timer;
   bool _receivedWhileOpen = false;
   bool _reading = false;
-  DateTime _readAt = DateTime.now();
 
   @override
   void initState() {
@@ -59,7 +58,6 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
           (result.receivedNewLine && !_receivedWhileOpen)) {
         setState(() {
           _observation = result.latest;
-          _readAt = DateTime.now();
           _receivedWhileOpen =
               result.latest != null &&
               (result.receivedNewLine || _receivedWhileOpen);
@@ -80,7 +78,10 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
 
   @override
   Widget build(BuildContext context) => WorldScreen(
-    snapshot: telemetryDisplaySnapshot(_observation, readAt: _readAt),
+    snapshot: telemetryDisplaySnapshot(
+      _observation,
+      readAt: _observation?.receivedAt ?? DateTime.now(),
+    ),
     telemetryMode: true,
     telemetryManpower: _observation?.manpower,
     telemetry: _observation,

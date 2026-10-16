@@ -1,6 +1,70 @@
 /// Read-only country values. The exporter checks against installed game docs.
 enum TelemetryFormat { count, decimal, percent }
 
+/// Accepted values after parsing the mod's localized numeric output.
+/// Bounds are only used where the field's meaning or game docs establish them.
+enum TelemetryDomain {
+  finite(
+    'Конечное число; границы не подтверждены',
+    'Finite number; bounds unverified',
+  ),
+  nonNegativeFinite('Конечное число от 0', 'Finite number from 0'),
+  signedInteger(
+    'Целое число, возможно отрицательное',
+    'Integer, possibly negative',
+  ),
+  nonNegativeInteger('Целое число от 0', 'Integer from 0'),
+  fraction('Доля от 0 до 1', 'Fraction from 0 to 1');
+
+  const TelemetryDomain(this.descriptionRu, this.descriptionEn);
+
+  final String descriptionRu;
+  final String descriptionEn;
+
+  bool accepts(double value) {
+    if (!value.isFinite) return false;
+    return switch (this) {
+      TelemetryDomain.finite => true,
+      TelemetryDomain.nonNegativeFinite => value >= 0,
+      TelemetryDomain.signedInteger => value == value.truncateToDouble(),
+      TelemetryDomain.nonNegativeInteger =>
+        value >= 0 && value == value.truncateToDouble(),
+      TelemetryDomain.fraction => value >= 0 && value <= 1,
+    };
+  }
+}
+
+enum TelemetryUnit {
+  points('очков', 'points'),
+  pointsPerDay('очков/день', 'points/day'),
+  percent('%', '%'),
+  people('человек', 'people'),
+  thousandPeople('тыс. человек', 'thousand people'),
+  divisions('дивизий', 'divisions'),
+  battalions('батальонов', 'battalions'),
+  ships('кораблей', 'ships'),
+  aircraft('самолётов', 'aircraft'),
+  factories('заводов', 'factories'),
+  thousandFuel('тыс. ед. топлива', 'thousand fuel units'),
+  researchSlots('ячеек', 'slots'),
+  technologies('технологий', 'technologies'),
+  levels('уровней', 'levels'),
+  states('штатов', 'states'),
+  supplyNodes('узлов', 'supply nodes'),
+  countries('стран', 'countries'),
+  upgrades('улучшений', 'upgrades'),
+  operatives('оперативников', 'operatives'),
+  strength('ед. силы', 'strength units'),
+  resources('ед. ресурса', 'resource units'),
+  equipment('ед. снаряжения', 'equipment units'),
+  buildings('построек', 'buildings');
+
+  const TelemetryUnit(this.ru, this.en);
+
+  final String ru;
+  final String en;
+}
+
 class TelemetryMetric {
   const TelemetryMetric(
     this.key,
@@ -14,6 +78,181 @@ class TelemetryMetric {
   final String key, variable, ru, en, group;
   final TelemetryFormat format;
   final double scale;
+
+  String get unitRu => unit.ru;
+  String get unitEn => unit.en;
+
+  /// The game variable used by set_temp_variable in the generated player mod.
+  String get sourceRu => 'Динамическая переменная страны: $variable';
+  String get sourceEn => 'Country dynamic variable: $variable';
+
+  TelemetryUnit get unit => switch (group) {
+    'politics' => switch (key) {
+      'political_power' || 'command_power' => TelemetryUnit.points,
+      'political_power_daily' ||
+      'command_power_daily' => TelemetryUnit.pointsPerDay,
+      'stability' ||
+      'war_support' ||
+      'surrender_progress' ||
+      'party_democratic' ||
+      'party_fascism' ||
+      'party_communism' ||
+      'party_neutrality' => TelemetryUnit.percent,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'manpower' => switch (key) {
+      'manpower' ||
+      'training_manpower' ||
+      'garrison_need' => TelemetryUnit.people,
+      'deployed_army' ||
+      'deployed_navy' ||
+      'deployed_air' ||
+      'deployed_total' ||
+      'casualties' ||
+      'max_manpower' => TelemetryUnit.thousandPeople,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'army' => switch (key) {
+      'divisions' => TelemetryUnit.divisions,
+      'battalions' => TelemetryUnit.battalions,
+      'ships' => TelemetryUnit.ships,
+      'planes' => TelemetryUnit.aircraft,
+      'army_xp' || 'navy_xp' || 'air_xp' => TelemetryUnit.points,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'industry' => switch (key) {
+      'energy_ratio' => TelemetryUnit.percent,
+      'civilian_factories' ||
+      'military_factories' ||
+      'dockyards' ||
+      'available_civ' ||
+      'available_mil' ||
+      'available_dock' ||
+      'project_civ' ||
+      'controlled_factories' ||
+      'owned_factories' => TelemetryUnit.factories,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'fuel' => switch (key) {
+      'fuel_ratio' => TelemetryUnit.percent,
+      'fuel' || 'max_fuel' => TelemetryUnit.thousandFuel,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'research' => switch (key) {
+      'research_slots' => TelemetryUnit.researchSlots,
+      'researched_count' => TelemetryUnit.technologies,
+      'land_doctrine' => TelemetryUnit.levels,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'territory' => switch (key) {
+      'owned_states' ||
+      'controlled_states' ||
+      'core_states' ||
+      'occupied_states' => TelemetryUnit.states,
+      'supply_nodes' => TelemetryUnit.supplyNodes,
+      'subjects' || 'faction_members' => TelemetryUnit.countries,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'intelligence' => switch (key) {
+      'agency_upgrades' => TelemetryUnit.upgrades,
+      'operatives' ||
+      'operative_slots' ||
+      'free_operative_slots' => TelemetryUnit.operatives,
+      'encryption' => TelemetryUnit.strength,
+      _ => throw StateError('No telemetry unit for $key'),
+    },
+    'resources' => TelemetryUnit.resources,
+    'equipment' || 'production' => TelemetryUnit.equipment,
+    'construction' => TelemetryUnit.buildings,
+    _ => throw StateError('No telemetry unit for $key'),
+  };
+
+  TelemetryDomain get domain => switch (group) {
+    'politics' => switch (key) {
+      'war_support' ||
+      'party_democratic' ||
+      'party_fascism' ||
+      'party_communism' ||
+      'party_neutrality' => TelemetryDomain.fraction,
+      'political_power' ||
+      'political_power_daily' ||
+      'command_power' ||
+      'command_power_daily' ||
+      'stability' ||
+      'surrender_progress' => TelemetryDomain.finite,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'manpower' => switch (key) {
+      'deployed_army' ||
+      'deployed_navy' ||
+      'deployed_air' ||
+      'deployed_total' ||
+      'casualties' ||
+      'max_manpower' => TelemetryDomain.nonNegativeFinite,
+      'manpower' ||
+      'training_manpower' ||
+      'garrison_need' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'army' => switch (key) {
+      'army_xp' || 'navy_xp' || 'air_xp' => TelemetryDomain.nonNegativeFinite,
+      'divisions' ||
+      'battalions' ||
+      'ships' ||
+      'planes' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'industry' => switch (key) {
+      'energy_ratio' => TelemetryDomain.fraction,
+      'civilian_factories' ||
+      'military_factories' ||
+      'dockyards' ||
+      'available_civ' ||
+      'available_mil' ||
+      'available_dock' ||
+      'project_civ' ||
+      'controlled_factories' ||
+      'owned_factories' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'fuel' => switch (key) {
+      'fuel_ratio' => TelemetryDomain.finite,
+      'fuel' || 'max_fuel' => TelemetryDomain.nonNegativeFinite,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'research' => switch (key) {
+      'research_slots' ||
+      'researched_count' ||
+      'land_doctrine' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'territory' => switch (key) {
+      'owned_states' ||
+      'controlled_states' ||
+      'core_states' ||
+      'occupied_states' ||
+      'supply_nodes' ||
+      'subjects' ||
+      'faction_members' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'intelligence' => switch (key) {
+      'encryption' => TelemetryDomain.finite,
+      'agency_upgrades' ||
+      'operatives' ||
+      'operative_slots' ||
+      'free_operative_slots' => TelemetryDomain.nonNegativeInteger,
+      _ => throw StateError('No telemetry domain for $key'),
+    },
+    'resources' =>
+      key.endsWith('_balance')
+          ? TelemetryDomain.signedInteger
+          : TelemetryDomain.nonNegativeInteger,
+    'equipment' ||
+    'construction' ||
+    'production' => TelemetryDomain.nonNegativeInteger,
+    _ => throw StateError('No telemetry domain for $key'),
+  };
 }
 
 final telemetryScalars = <TelemetryMetric>[

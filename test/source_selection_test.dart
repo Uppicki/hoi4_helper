@@ -37,7 +37,7 @@ void main() {
 
     expect(find.byType(TelemetryScreen), findsOneWidget);
     expect(find.byType(WorldScreen), findsOneWidget);
-    expect(find.text('ДАННЫЕ ИЗ ИГРЫ'), findsOneWidget);
+    expect(find.text('НАБЛЮДЕНИЕ МОДА'), findsOneWidget);
     expect(find.byType(SavesScreen), findsNothing);
 
     await tester.tap(find.byKey(const Key('change-source-from-telemetry')));
@@ -90,7 +90,7 @@ void main() {
     );
     await tester.pumpWidget(dashboard(first));
     await tester.pumpAndSettle();
-    expect(find.text('ДАННЫЕ ИЗ ИГРЫ'), findsOneWidget);
+    expect(find.text('НАБЛЮДЕНИЕ МОДА'), findsOneWidget);
     expect(find.textContaining('1936.01.02 02:00'), findsWidgets);
     expect(find.text('Армейский резерв'), findsOneWidget);
     expect(find.text('5 562'), findsOneWidget);

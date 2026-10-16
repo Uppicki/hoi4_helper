@@ -19,7 +19,10 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    const observation = TelemetryObservation(
+    final observation = TelemetryObservation(
+      receivedAt: DateTime(2026, 10, 8, 21, 15),
+      logSource:
+          r'C:\Documents\Paradox Interactive\Hearts of Iron IV\logs\game.log',
       gameDate: '1936.01.03.02',
       playerTag: 'ALB',
       manpower: 5590,
@@ -60,6 +63,19 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(find.byKey(const Key('save-summary')));
+    await tester.pumpAndSettle();
+    expect(find.text('Путь журнала'), findsOneWidget);
+    expect(
+      find.text(
+        r'C:\Documents\Paradox Interactive\Hearts of Iron IV\logs\game.log',
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('Получено приложением'), findsOneWidget);
+    expect(find.text('08.10.2026 21:15'), findsOneWidget);
+    expect(find.text('Формат записи мода'), findsOneWidget);
+    expect(find.text('Схема наблюдения'), findsOneWidget);
     expect(find.text('Стабильность: 42.0 %'), findsOneWidget);
     expect(find.text('Поддержка войны: 31.0 %'), findsOneWidget);
     expect(find.text('5 590'), findsOneWidget);
@@ -70,6 +86,22 @@ void main() {
     expect(find.text('Сырьевые ресурсы'), findsOneWidget);
     expect(find.text('Снаряжение'), findsOneWidget);
     expect(find.text('Сталь'), findsNothing);
+
+    await tester.ensureVisible(find.text('Политика'));
+    await tester.tap(find.text('Политика'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widgetList<Tooltip>(find.byType(Tooltip))
+          .any(
+            (tooltip) =>
+                tooltip.message?.contains(
+                  'переменная страны political_power',
+                ) ==
+                true,
+          ),
+      isTrue,
+    );
 
     await tester.ensureVisible(find.text('Сырьевые ресурсы'));
     await tester.tap(find.text('Сырьевые ресурсы'));
