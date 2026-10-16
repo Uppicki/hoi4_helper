@@ -3,8 +3,10 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
+import '../core/focus_tree.dart';
 import '../core/telemetry_log.dart';
 import '../core/telemetry_snapshot.dart';
+import 'focus_tree_screen.dart';
 import 'telemetry_details.dart';
 import '../core/world_state.dart';
 
@@ -20,6 +22,7 @@ class WorldScreen extends StatefulWidget {
     this.telemetryManpower,
     this.telemetry,
     this.telemetryReceivedWhileOpen = false,
+    this.focusTreeRepository,
   });
 
   final WorldStateSnapshot snapshot;
@@ -30,6 +33,7 @@ class WorldScreen extends StatefulWidget {
   final int? telemetryManpower;
   final TelemetryObservation? telemetry;
   final bool telemetryReceivedWhileOpen;
+  final FocusTreeRepository? focusTreeRepository;
 
   @override
   State<WorldScreen> createState() => _WorldScreenState();
@@ -295,13 +299,32 @@ class _WorldScreenState extends State<WorldScreen> {
         SizedBox(width: math.min(width, 300), child: _saveMenu(context)),
       ],
     );
+    final focusTile = _focusTile(context, names, player, width);
     if (width < 760) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           identity,
           const SizedBox(height: 12),
+          focusTile,
+          const SizedBox(height: 12),
           Align(alignment: Alignment.centerRight, child: tools),
+        ],
+      );
+    }
+    if (width < 1100) {
+      return Column(
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(child: identity),
+              const SizedBox(width: 16),
+              tools,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Align(alignment: Alignment.center, child: focusTile),
         ],
       );
     }
@@ -310,10 +333,120 @@ class _WorldScreenState extends State<WorldScreen> {
       children: [
         Expanded(child: identity),
         const SizedBox(width: 16),
+        focusTile,
+        const SizedBox(width: 16),
         tools,
       ],
     );
   }
+
+  Widget _focusTile(
+    BuildContext context,
+    GameLocalization names,
+    CountryWorldState? player,
+    double availableWidth,
+  ) => SizedBox(
+    width: math.min(300, availableWidth),
+    child: Material(
+      color: const Color(0xFF19231D),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: Color(0xFF526357)),
+      ),
+      child: InkWell(
+        key: const Key('focus-summary'),
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => Navigator.of(context).push<void>(
+          MaterialPageRoute(
+            builder: (_) => FocusTreeScreen(
+              names: names,
+              countryTag: widget.snapshot.playerTag,
+              treeId: widget.telemetryMode ? null : player?.focusTree,
+              currentFocus: widget.telemetryMode ? null : player?.currentFocus,
+              completedFocuses: widget.telemetryMode
+                  ? const []
+                  : player?.completedFocuses ?? const [],
+              repository: widget.focusTreeRepository,
+            ),
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.account_tree_outlined,
+                    size: 17,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _ui('Национальный фокус', 'National focus'),
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const Icon(Icons.chevron_right, size: 18),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _ui('ТЕКУЩИЙ ФОКУС', 'CURRENT FOCUS'),
+                style: const TextStyle(
+                  color: Color(0xFFAAB7AD),
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                ),
+              ),
+              const SizedBox(height: 3),
+              Text(
+                widget.telemetryMode ? '—' : names.name(player?.currentFocus),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: _focusFact(_ui('Осталось', 'Remaining'), '—'),
+                  ),
+                  Expanded(child: _focusFact(_ui('Следующий', 'Next'), '—')),
+                ],
+              ),
+              const SizedBox(height: 9),
+              Text(
+                widget.telemetryMode
+                    ? _ui(
+                        'Мод пока не передаёт сведения о фокусах.',
+                        'The mod does not report focus data yet.',
+                      )
+                    : _ui(
+                        'Срок и следующий фокус не определяются из сохранения.',
+                        'Remaining time and next focus are not determined from the save.',
+                      ),
+                style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 11),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
+
+  Widget _focusFact(String label, String value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 11),
+      ),
+      const SizedBox(height: 3),
+      Text(value),
+    ],
+  );
 
   Widget _saveMenu(BuildContext context) {
     final save = widget.snapshot.loadedSave;

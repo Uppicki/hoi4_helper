@@ -73,7 +73,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Третий рейх'), findsOneWidget);
-    expect(find.text('Рейнская область'), findsOneWidget);
+    expect(find.text('Рейнская область'), findsWidgets);
     expect(find.text('Топливо'), findsNothing);
     expect(find.text('Опыт флота'), findsNothing);
 
@@ -90,6 +90,6 @@ void main() {
     await tester.tap(find.text('English').last);
     await tester.pumpAndSettle();
     expect(find.text('German Reich'), findsOneWidget);
-    expect(find.text('Rhineland'), findsOneWidget);
+    expect(find.text('Rhineland'), findsWidgets);
   });
 }
