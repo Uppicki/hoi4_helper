@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math' as math;
 
 import 'telemetry_catalog.dart';
 
@@ -78,6 +79,25 @@ final _spaceGroupedCount = RegExp(
   r'^[-+]?[0-9]{1,3}(?:[ \u00a0\u202f][0-9]{3})+$',
 );
 
+bool isValidTelemetryGameDate(String code) {
+  final match = RegExp(
+    r'^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})$',
+  ).firstMatch(code);
+  if (match == null) return false;
+  final year = int.parse(match.group(1)!);
+  final month = int.parse(match.group(2)!);
+  final day = int.parse(match.group(3)!);
+  final hour = int.parse(match.group(4)!);
+  const days = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  return year >= 1 &&
+      year <= 9999 &&
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= days[month - 1] &&
+      hour <= 24;
+}
+
 /// Legacy one-line format, retained for older installed mods and log history.
 TelemetryObservation? parseTelemetryLine(
   String line, {
@@ -85,7 +105,9 @@ TelemetryObservation? parseTelemetryLine(
   String? logSource,
 }) {
   final prefix = _logPrefix.firstMatch(line);
-  if (prefix == null) return null;
+  if (prefix == null || !isValidTelemetryGameDate(prefix.group(1)!)) {
+    return null;
+  }
   final match = _v1.firstMatch(line.substring(prefix.end));
   if (match == null) return null;
   final manpower = int.tryParse(match.group(2)!);
@@ -103,10 +125,26 @@ TelemetryObservation? parseTelemetryLine(
   );
 }
 
+enum TelemetryStreamStatus {
+  noLog,
+  noModRecords,
+  incompleteFrame,
+  completeObservation,
+  waitingNextDay,
+}
+
 class TelemetryLogPoll {
-  const TelemetryLogPoll({required this.latest, required this.receivedNewLine});
+  const TelemetryLogPoll({
+    required this.latest,
+    required this.receivedNewLine,
+    required this.status,
+    required this.historical,
+  });
+
   final TelemetryObservation? latest;
   final bool receivedNewLine;
+  final TelemetryStreamStatus status;
+  final bool historical;
 }
 
 class _Frame {
@@ -162,13 +200,68 @@ double? _number(String raw, TelemetryMetric metric) {
 /// Follows only appended bytes. A V2 observation is published after every
 /// numbered part and the end marker arrive for the same country and game day.
 class TelemetryLogReader {
-  TelemetryLogReader(this.file);
+  TelemetryLogReader(this.file, {this.afterLengthMeasured});
 
   final File file;
+
+  /// Allows a test to change the file between measuring and reading.
+  final Future<void> Function()? afterLengthMeasured;
   int? _offset;
   String _pending = '';
   TelemetryObservation? _latest;
   _Frame? _frame;
+  bool _seenMod = false;
+  bool _incomplete = false;
+  bool _historical = false;
+  bool _skipFirstLine = false;
+  List<int> _head = const [];
+  List<int> _middle = const [];
+  List<int> _tail = const [];
+  DateTime? _modified;
+  DateTime? _changed;
+
+  void _reset() {
+    _offset = null;
+    _pending = '';
+    _latest = null;
+    _frame = null;
+    _seenMod = false;
+    _incomplete = false;
+    _historical = false;
+    _skipFirstLine = false;
+    _head = const [];
+    _middle = const [];
+    _tail = const [];
+    _modified = null;
+    _changed = null;
+  }
+
+  TelemetryLogPoll _result(bool receivedNewLine, {bool noLog = false}) =>
+      TelemetryLogPoll(
+        latest: _latest,
+        receivedNewLine: receivedNewLine,
+        historical: _historical,
+        status: noLog
+            ? TelemetryStreamStatus.noLog
+            : _frame != null || _incomplete || _pending.contains('HOI4_HELPER_')
+            ? TelemetryStreamStatus.incompleteFrame
+            : receivedNewLine
+            ? TelemetryStreamStatus.completeObservation
+            : _latest != null
+            ? TelemetryStreamStatus.waitingNextDay
+            : _seenMod
+            ? TelemetryStreamStatus.incompleteFrame
+            : TelemetryStreamStatus.noModRecords,
+      );
+
+  void _startRecord(String date, String tag) {
+    final latest = _latest;
+    if (latest != null &&
+        (tag != latest.playerTag || date.compareTo(latest.gameDate) <= 0)) {
+      _latest = null;
+      _historical = false;
+    }
+  }
 
   static File? findDefaultLog() {
     final env = Platform.environment;
@@ -192,22 +285,39 @@ class TelemetryLogReader {
 
   TelemetryObservation? _readV2(String line, String logSource) {
     final prefix = _logPrefix.firstMatch(line);
-    if (prefix == null) return null;
+    if (prefix == null) {
+      _frame = null;
+      _incomplete = true;
+      return null;
+    }
     final body = line.substring(prefix.end).trimRight();
-    if (!body.startsWith('HOI4_HELPER_V2|')) return null;
+    if (!body.startsWith('HOI4_HELPER_V2|')) {
+      _frame = null;
+      _incomplete = true;
+      return null;
+    }
+    _seenMod = true;
+    if (!isValidTelemetryGameDate(prefix.group(1)!)) {
+      _frame = null;
+      _incomplete = true;
+      return null;
+    }
     final fields = _fields(body.substring('HOI4_HELPER_V2|'.length));
     if (fields == null) {
       _frame = null;
+      _incomplete = true;
       return null;
     }
     final date = prefix.group(1)!;
     final tag = fields['tag'];
     if (tag == null || !_tag.hasMatch(tag)) {
       _frame = null;
+      _incomplete = true;
       return null;
     }
     switch (fields['phase']) {
       case 'begin':
+        _startRecord(date, tag);
         final parts = int.tryParse(fields['parts'] ?? '');
         final manpower = int.tryParse(fields['manpower'] ?? '');
         _frame =
@@ -216,16 +326,19 @@ class TelemetryLogReader {
                 parts <= 100 &&
                 manpower != null &&
                 manpower >= 0 &&
+                fields.length == 4 &&
                 telemetryMetrics['manpower']!.domain.accepts(
                   manpower.toDouble(),
                 )
             ? _Frame(date, tag, parts, manpower)
             : null;
+        _incomplete = true;
         return null;
       case 'data':
         final frame = _frame;
         final part = int.tryParse(fields['part'] ?? '');
         if (frame == null ||
+            fields.length < 4 ||
             frame.date != date ||
             frame.tag != tag ||
             part == null ||
@@ -233,6 +346,7 @@ class TelemetryLogReader {
             part >= frame.parts ||
             frame.data.containsKey(part)) {
           _frame = null;
+          _incomplete = true;
           return null;
         }
         frame.data[part] = {
@@ -250,7 +364,9 @@ class TelemetryLogReader {
             frame.date != date ||
             frame.tag != tag ||
             int.tryParse(fields['parts'] ?? '') != frame.parts ||
-            frame.data.length != frame.parts) {
+            frame.data.length != frame.parts ||
+            fields.length != 3) {
+          _incomplete = true;
           return null;
         }
         final values = <String, double>{};
@@ -258,9 +374,15 @@ class TelemetryLogReader {
         final seen = <String>{};
         for (var part = 0; part < frame.parts; part++) {
           final data = frame.data[part];
-          if (data == null) return null;
+          if (data == null) {
+            _incomplete = true;
+            return null;
+          }
           for (final entry in data.entries) {
-            if (!seen.add(entry.key)) return null;
+            if (!seen.add(entry.key)) {
+              _incomplete = true;
+              return null;
+            }
             final metric = telemetryMetrics[entry.key];
             if (metric == null) continue;
             final number = _number(entry.value, metric);
@@ -271,6 +393,7 @@ class TelemetryLogReader {
             }
           }
         }
+        _incomplete = false;
         return TelemetryObservation(
           gameDate: frame.date,
           playerTag: frame.tag,
@@ -283,61 +406,170 @@ class TelemetryLogReader {
         );
       default:
         _frame = null;
+        _incomplete = true;
         return null;
     }
   }
 
+  Future<List<int>> _sample(
+    RandomAccessFile handle,
+    int start,
+    int count,
+  ) async {
+    await handle.setPosition(start);
+    return handle.read(count);
+  }
+
+  bool _same(List<int> left, List<int> right) {
+    if (left.length != right.length) return false;
+    for (var i = 0; i < left.length; i++) {
+      if (left[i] != right[i]) return false;
+    }
+    return true;
+  }
+
+  Future<void> _captureWitness(RandomAccessFile handle, int offset) async {
+    _head = await _sample(handle, 0, math.min(256, offset));
+    final middleStart = math.max(0, offset ~/ 2 - 128);
+    _middle = await _sample(
+      handle,
+      middleStart,
+      math.min(256, offset - middleStart),
+    );
+    _tail = await _sample(
+      handle,
+      math.max(0, offset - 256),
+      math.min(256, offset),
+    );
+  }
+
+  Future<bool> _matchesWitness(RandomAccessFile handle, int offset) async {
+    if (await handle.length() < offset) return false;
+    final head = await _sample(handle, 0, _head.length);
+    final middleStart = math.max(0, offset ~/ 2 - 128);
+    final middle = await _sample(handle, middleStart, _middle.length);
+    final tail = await _sample(handle, offset - _tail.length, _tail.length);
+    return _same(head, _head) && _same(middle, _middle) && _same(tail, _tail);
+  }
+
   Future<TelemetryLogPoll> poll() async {
-    if (!await file.exists()) {
-      _offset = null;
-      _pending = '';
-      _frame = null;
-      _latest = null;
-      return const TelemetryLogPoll(latest: null, receivedNewLine: false);
-    }
-    final size = await file.length();
-    final initial = _offset == null || size < _offset!;
-    if (initial) {
-      _offset = size > 65536 ? size - 65536 : 0;
-      _pending = '';
-      _frame = null;
-      _latest = null;
-    }
-    if (size == _offset) {
-      return TelemetryLogPoll(latest: _latest, receivedNewLine: false);
-    }
-    final handle = await file.open(mode: FileMode.read);
-    late final List<int> bytes;
+    RandomAccessFile? handle;
     try {
-      await handle.setPosition(_offset!);
-      bytes = await handle.read(size - _offset!);
+      if (!await file.exists()) {
+        _reset();
+        return _result(false, noLog: true);
+      }
+      handle = await file.open(mode: FileMode.read);
+      final size = await handle.length();
+      final stat = await file.stat();
+      final modified = stat.modified;
+      if (_offset != null &&
+          (size < _offset! ||
+              (Platform.isWindows && stat.changed != _changed) ||
+              (size == _offset && modified != _modified) ||
+              !await _matchesWitness(handle, _offset!))) {
+        _reset();
+      }
+      final initial = _offset == null;
+      if (initial) {
+        _offset = math.max(0, size - 65536);
+        _skipFirstLine = _offset! > 0;
+      }
+      final start = _offset!;
+      final count = math.min(65536, size - start);
+      if (count == 0) {
+        _modified = modified;
+        _changed = stat.changed;
+        return _result(false);
+      }
+      await afterLengthMeasured?.call();
+      await handle.setPosition(start);
+      final bytes = await handle.read(count);
+      if (bytes.length != count ||
+          await handle.length() < size ||
+          (!initial && !await _matchesWitness(handle, start))) {
+        _reset();
+        return _result(false);
+      }
+      final nextOffset = start + count;
+      await _captureWitness(handle, nextOffset);
+      // A replaced path can point to a different file while the old handle
+      // remains readable. Check the current path before accepting its bytes.
+      final current = await file.open(mode: FileMode.read);
+      try {
+        if (!await _matchesWitness(current, nextOffset)) {
+          _reset();
+          return _result(false);
+        }
+      } finally {
+        await current.close();
+      }
+      final afterRead = await file.stat();
+      if (Platform.isWindows && afterRead.changed != stat.changed) {
+        _reset();
+        return _result(false);
+      }
+      _offset = nextOffset;
+      _modified = afterRead.modified;
+      _changed = afterRead.changed;
+      var chunk = _pending + utf8.decode(bytes, allowMalformed: true);
+      if (_skipFirstLine) {
+        final firstNewline = chunk.indexOf('\n');
+        if (firstNewline < 0) return _result(false);
+        chunk = chunk.substring(firstNewline + 1);
+        _skipFirstLine = false;
+      }
+      final lastNewline = chunk.lastIndexOf('\n');
+      if (lastNewline < 0) {
+        _pending = chunk.length <= 16384 ? chunk : '';
+        if (chunk.length > 16384) {
+          _frame = null;
+          _incomplete = true;
+        }
+        return _result(false);
+      }
+      _pending = chunk.substring(lastNewline + 1);
+      if (_pending.length > 16384) {
+        _pending = '';
+        _frame = null;
+        _incomplete = true;
+      }
+      var receivedNewLine = false;
+      final logSource = file.absolute.path;
+      for (final line in chunk.substring(0, lastNewline).split('\n')) {
+        final trimmed = line.trimRight();
+        if (!trimmed.contains('HOI4_HELPER_')) continue;
+        _seenMod = true;
+        final observation = parseTelemetryLine(
+          trimmed,
+          receivedAt: DateTime.now(),
+          logSource: logSource,
+        );
+        if (observation != null) {
+          _startRecord(observation.gameDate, observation.playerTag);
+          _frame = null;
+          _incomplete = false;
+          _latest = observation;
+          _historical = initial;
+          receivedNewLine = !initial;
+        } else if (trimmed.contains('HOI4_HELPER_V2')) {
+          final complete = _readV2(trimmed, logSource);
+          if (complete != null) {
+            _latest = complete;
+            _historical = initial;
+            receivedNewLine = !initial;
+          }
+        } else {
+          _frame = null;
+          _incomplete = true;
+        }
+      }
+      return _result(receivedNewLine);
+    } on FileSystemException {
+      _reset();
+      return _result(false, noLog: true);
     } finally {
-      await handle.close();
+      await handle?.close();
     }
-    _offset = size;
-    final chunk = _pending + utf8.decode(bytes, allowMalformed: true);
-    final lastNewline = chunk.lastIndexOf('\n');
-    if (lastNewline < 0) {
-      _pending = chunk.length < 16384 ? chunk : '';
-      return TelemetryLogPoll(latest: _latest, receivedNewLine: false);
-    }
-    _pending = chunk.substring(lastNewline + 1);
-    if (_pending.length > 16384) _pending = '';
-    var receivedNewLine = false;
-    final logSource = file.absolute.path;
-    for (final line in chunk.substring(0, lastNewline).split('\n')) {
-      final trimmed = line.trimRight();
-      final observation =
-          parseTelemetryLine(
-            trimmed,
-            receivedAt: DateTime.now(),
-            logSource: logSource,
-          ) ??
-          _readV2(trimmed, logSource);
-      if (observation == null) continue;
-      _latest = observation;
-      receivedNewLine = !initial;
-    }
-    return TelemetryLogPoll(latest: _latest, receivedNewLine: receivedNewLine);
   }
 }

@@ -37,8 +37,8 @@ class SourceScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 Text(
                   label(
-                    'Телеметрия показывает доступные данные из запущенной игры. Сохранение даёт полный снимок на игровую дату.',
-                    'Telemetry shows available data from the running game. A save provides a full snapshot at a game date.',
+                    'Телеметрия показывает последнее полное наблюдение мода. Просмотр сохранений — отдельный экспериментальный источник; он не дополняет телеметрию и не используется для текущих рекомендаций.',
+                    'Telemetry shows the last complete mod observation. Save browsing is a separate experimental source; it does not augment telemetry or feed current recommendations.',
                   ),
                   style: const TextStyle(color: Color(0xFFAAB7AD)),
                 ),
@@ -65,7 +65,12 @@ class SourceScreen extends StatelessWidget {
                     key: const Key('file-source'),
                     contentPadding: const EdgeInsets.all(20),
                     leading: const Icon(Icons.save_outlined, size: 32),
-                    title: Text(label('2. Сохранения', '2. Saves')),
+                    title: Text(
+                      label(
+                        '2. Сохранения · экспериментально',
+                        '2. Saves · experimental',
+                      ),
+                    ),
                     subtitle: Text(
                       label(
                         'Выбрать папку и сохранение .hoi4',

@@ -40,7 +40,11 @@ void main() {
 
   test('invalid telemetry dates remain unknown', () {
     expect(parseTelemetryGameDate('1936.02.29.02'), isNull);
-    expect(parseTelemetryGameDate('1936.01.02.24'), isNull);
+    expect(parseTelemetryGameDate('1936.01.02.24')?.hour, 24);
+    expect(parseTelemetryGameDate('1936.01.02.25'), isNull);
+    expect(parseTelemetryGameDate('1936.11.30.02')?.month, 11);
+    expect(parseTelemetryGameDate('1936.12.31.23')?.day, 31);
+    expect(parseTelemetryGameDate('1936.11.31.02'), isNull);
     expect(
       telemetryDisplaySnapshot(null, readAt: DateTime(2026)).gameDate,
       isNull,

@@ -29,9 +29,8 @@ class TelemetryScreen extends StatefulWidget {
 
 class _TelemetryScreenState extends State<TelemetryScreen> {
   TelemetryLogReader? _reader;
-  TelemetryObservation? _observation;
+  TelemetryLogPoll? _pollResult;
   Timer? _timer;
-  bool _receivedWhileOpen = false;
   bool _reading = false;
 
   @override
@@ -54,15 +53,7 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
     try {
       final result = await reader.poll();
       if (!mounted) return;
-      if (!identical(result.latest, _observation) ||
-          (result.receivedNewLine && !_receivedWhileOpen)) {
-        setState(() {
-          _observation = result.latest;
-          _receivedWhileOpen =
-              result.latest != null &&
-              (result.receivedNewLine || _receivedWhileOpen);
-        });
-      }
+      setState(() => _pollResult = result);
     } on FileSystemException {
       // HOI4 can briefly lock game.log while writing.
     } finally {
@@ -77,17 +68,21 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => WorldScreen(
-    snapshot: telemetryDisplaySnapshot(
-      _observation,
-      readAt: _observation?.receivedAt ?? DateTime.now(),
-    ),
-    telemetryMode: true,
-    telemetryManpower: _observation?.manpower,
-    telemetry: _observation,
-    telemetryReceivedWhileOpen: _receivedWhileOpen,
-    language: widget.language,
-    localizationRepository: widget.localizationRepository,
-    onChangeSource: widget.onChangeSource,
-  );
+  Widget build(BuildContext context) {
+    final observation = _pollResult?.latest;
+    return WorldScreen(
+      snapshot: telemetryDisplaySnapshot(
+        observation,
+        readAt: observation?.receivedAt ?? DateTime.now(),
+      ),
+      telemetryMode: true,
+      telemetryManpower: observation?.manpower,
+      telemetry: observation,
+      telemetryStatus: _pollResult?.status ?? TelemetryStreamStatus.noLog,
+      telemetryHistorical: _pollResult?.historical ?? false,
+      language: widget.language,
+      localizationRepository: widget.localizationRepository,
+      onChangeSource: widget.onChangeSource,
+    );
+  }
 }
