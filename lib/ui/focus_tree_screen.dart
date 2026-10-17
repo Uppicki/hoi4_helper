@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../core/focus_tree.dart';
 import '../core/game_localization.dart';
+import 'focus_tree_minimap.dart';
 
 /// Displays definitions from the installed game without treating them as a
 /// verified observation of the current campaign.
@@ -221,6 +222,29 @@ class _FocusGraphState extends State<_FocusGraph> {
   static const _column = 174.0;
   static const _row = 112.0;
 
+  void _navigateTo(Offset target, Size viewport, Size scene) {
+    final scale = _transform.value.getMaxScaleOnAxis();
+    double translation(
+      double targetAxis,
+      double viewportAxis,
+      double sceneAxis,
+    ) {
+      final minimum = viewportAxis - (sceneAxis + 120) * scale;
+      final maximum = 120 * scale;
+      if (minimum > maximum) return (viewportAxis - sceneAxis * scale) / 2;
+      return (viewportAxis / 2 - targetAxis * scale)
+          .clamp(minimum, maximum)
+          .toDouble();
+    }
+
+    _transform.value = Matrix4.identity()
+      ..translate(
+        translation(target.dx, viewport.width, scene.width),
+        translation(target.dy, viewport.height, scene.height),
+      )
+      ..scale(scale);
+  }
+
   @override
   Widget build(BuildContext context) {
     final displayed = widget.tree.displayedFocuses;
@@ -274,82 +298,119 @@ class _FocusGraphState extends State<_FocusGraph> {
               ..scale(scale);
           });
         }
-        return ClipRect(
-          child: InteractiveViewer(
-            key: const Key('focus-tree-canvas'),
-            transformationController: _transform,
-            constrained: false,
-            minScale: 0.15,
-            maxScale: 2.5,
-            boundaryMargin: const EdgeInsets.all(120),
-            child: SizedBox(
-              width: width,
-              height: height,
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(painter: _FocusEdges(displayed, points)),
-                  ),
-                  for (final focus in displayed)
-                    Positioned(
-                      left: points[focus.id]!.dx,
-                      top: points[focus.id]!.dy,
-                      width: _nodeWidth,
-                      height: _nodeHeight,
-                      child: Tooltip(
-                        message: focus.visibility == FocusVisibility.unknown
-                            ? '${focus.id}\n${widget.names.language == GameLanguage.russian ? 'Условия видимости ветки не проверены' : 'Branch visibility conditions are unverified'}'
-                            : focus.id,
-                        child: Container(
-                          key: ValueKey('focus-${focus.id}'),
-                          alignment: Alignment.center,
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: focus.id == widget.currentFocus
-                                ? const Color(0xFF4A4228)
-                                : widget.completedFocuses.contains(focus.id)
-                                ? const Color(0xFF294738)
-                                : const Color(0xFF1C2922),
-                            border: Border.all(
-                              color: focus.id == widget.currentFocus
-                                  ? const Color(0xFFD7B979)
-                                  : widget.completedFocuses.contains(focus.id)
-                                  ? const Color(0xFF80B99A)
-                                  : const Color(0xFF526357),
-                              width: focus.id == widget.currentFocus ? 2 : 1,
-                            ),
-                            borderRadius: BorderRadius.circular(9),
-                          ),
-                          child: Stack(
-                            children: [
-                              Center(
-                                child: Text(
-                                  widget.names.name(focus.id),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(fontSize: 12),
-                                ),
-                              ),
-                              if (focus.visibility == FocusVisibility.unknown)
-                                const Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Icon(
-                                    Icons.help_outline,
-                                    size: 12,
-                                    color: Color(0xFFD7B979),
-                                  ),
-                                ),
-                            ],
-                          ),
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            ClipRect(
+              child: InteractiveViewer(
+                key: const Key('focus-tree-canvas'),
+                transformationController: _transform,
+                constrained: false,
+                minScale: 0.15,
+                maxScale: 2.5,
+                boundaryMargin: const EdgeInsets.all(120),
+                child: SizedBox(
+                  width: width,
+                  height: height,
+                  child: Stack(
+                    children: [
+                      Positioned.fill(
+                        child: CustomPaint(
+                          painter: _FocusEdges(displayed, points),
                         ),
                       ),
-                    ),
-                ],
+                      for (final focus in displayed)
+                        Positioned(
+                          left: points[focus.id]!.dx,
+                          top: points[focus.id]!.dy,
+                          width: _nodeWidth,
+                          height: _nodeHeight,
+                          child: Tooltip(
+                            message: focus.visibility == FocusVisibility.unknown
+                                ? '${focus.id}\n${widget.names.language == GameLanguage.russian ? 'Условия видимости ветки не проверены' : 'Branch visibility conditions are unverified'}'
+                                : focus.id,
+                            child: Container(
+                              key: ValueKey('focus-${focus.id}'),
+                              alignment: Alignment.center,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: focus.id == widget.currentFocus
+                                    ? const Color(0xFF4A4228)
+                                    : widget.completedFocuses.contains(focus.id)
+                                    ? const Color(0xFF294738)
+                                    : const Color(0xFF1C2922),
+                                border: Border.all(
+                                  color: focus.id == widget.currentFocus
+                                      ? const Color(0xFFD7B979)
+                                      : widget.completedFocuses.contains(
+                                          focus.id,
+                                        )
+                                      ? const Color(0xFF80B99A)
+                                      : const Color(0xFF526357),
+                                  width: focus.id == widget.currentFocus
+                                      ? 2
+                                      : 1,
+                                ),
+                                borderRadius: BorderRadius.circular(9),
+                              ),
+                              child: Stack(
+                                children: [
+                                  Center(
+                                    child: Text(
+                                      widget.names.name(focus.id),
+                                      textAlign: TextAlign.center,
+                                      maxLines: 3,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                  ),
+                                  if (focus.visibility ==
+                                      FocusVisibility.unknown)
+                                    const Positioned(
+                                      right: 0,
+                                      top: 0,
+                                      child: Icon(
+                                        Icons.help_outline,
+                                        size: 12,
+                                        color: Color(0xFFD7B979),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ),
+            if (bounds.maxWidth >= 160 && bounds.maxHeight >= 140)
+              Positioned(
+                left: 12,
+                bottom: 12,
+                width: math.min(
+                  bounds.maxWidth - 24,
+                  math.max(200, math.min(420, bounds.maxWidth * 0.32)),
+                ),
+                height: math.min(
+                  bounds.maxHeight - 24,
+                  math.min(180, math.max(90, bounds.maxHeight * 0.28)),
+                ),
+                child: FocusTreeMiniMap(
+                  focuses: displayed,
+                  points: points,
+                  sceneSize: Size(width, height),
+                  viewportSize: bounds.biggest,
+                  transform: _transform,
+                  onNavigate: (target) =>
+                      _navigateTo(target, bounds.biggest, Size(width, height)),
+                  russian: widget.names.language == GameLanguage.russian,
+                  currentFocus: widget.currentFocus,
+                  completedFocuses: widget.completedFocuses,
+                ),
+              ),
+          ],
         );
       },
     );
