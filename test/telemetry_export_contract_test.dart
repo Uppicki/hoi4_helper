@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoi4_helper/core/telemetry_log.dart';
 
 void main() {
-  test('generated mod and reader agree on a complete V2 record', () async {
+  test('generated mod and reader agree on a complete V3 record', () async {
     final mod = File(
       'telemetry_mod/hoi4_helper_telemetry/common/on_actions/'
       'hoi4_helper_telemetry.txt',
@@ -12,7 +12,7 @@ void main() {
     final templates = RegExp(r'\blog = "([^"]+)"')
         .allMatches(mod)
         .map((match) => match.group(1)!)
-        .where((line) => line.startsWith('HOI4_HELPER_V2|'))
+        .where((line) => line.startsWith('HOI4_HELPER_V3|'))
         .toList();
     expect(templates.length, greaterThan(10));
 
@@ -22,6 +22,7 @@ void main() {
     final lines = templates.map((template) {
       final resolved = template
           .replaceAll('[ROOT.GetTag]', 'ALB')
+          .replaceAll('[THIS.GetTag]', 'ITA')
           .replaceAll('[ROOT.GetManpower]', '5590')
           .replaceAll(RegExp(r'\[\?[^\]]+\]'), '1');
       return '[21:28:00][1936.01.03.02][effectbase.cpp:1782]: $resolved\n';
@@ -29,7 +30,8 @@ void main() {
     await file.writeAsString(lines);
     final result = await TelemetryLogReader(file).poll();
     expect(result.receivedNewLine, isFalse);
-    expect(result.latest?.schemaVersion, 2);
+    expect(result.latest?.schemaVersion, 3);
+    expect(result.latest?.rawWorld?.relations.single.otherTag, 'ITA');
     expect(result.latest?.playerTag, 'ALB');
     expect(result.latest?.manpower, 5590);
     expect(result.latest?.values.length, greaterThan(150));

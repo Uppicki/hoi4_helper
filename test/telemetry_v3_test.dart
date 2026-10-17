@@ -174,6 +174,11 @@ void main() {
       expect(lastComplete.data, contains('1936.03.05.24'));
       expect(find.text('Ожидание следующего игрового дня.'), findsOneWidget);
       expect(find.byKey(const Key('focus-summary')), findsOneWidget);
+      expect(find.text('Войны игрока'), findsOneWidget);
+      expect(
+        find.text('В этом полном наблюдении стран-противников нет.'),
+        findsOneWidget,
+      );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
     },

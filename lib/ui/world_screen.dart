@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import '../core/game_localization.dart';
 import '../core/focus_tree.dart';
 import '../core/telemetry_log.dart';
+import '../core/player_world.dart';
+import 'player_war_overview.dart';
 import '../core/telemetry_snapshot.dart';
 import 'focus_tree_screen.dart';
 import 'telemetry_details.dart';
@@ -24,6 +26,9 @@ class WorldScreen extends StatefulWidget {
     this.focusTreeRepository,
     this.telemetryStatus,
     this.telemetryHistorical = false,
+    this.playerWorldKnowledge = const PlayerWorldKnowledge.unavailable(
+      PlayerWorldAvailability.unavailable,
+    ),
   });
 
   final WorldStateSnapshot snapshot;
@@ -36,6 +41,7 @@ class WorldScreen extends StatefulWidget {
   final FocusTreeRepository? focusTreeRepository;
   final TelemetryStreamStatus? telemetryStatus;
   final bool telemetryHistorical;
+  final PlayerWorldKnowledge playerWorldKnowledge;
 
   @override
   State<WorldScreen> createState() => _WorldScreenState();
@@ -149,6 +155,14 @@ class _WorldScreenState extends State<WorldScreen> {
         const SizedBox(height: 24),
         if (!widget.telemetryMode) ...[
           _worldSummary(world),
+          const SizedBox(height: 24),
+        ],
+        if (widget.telemetryMode) ...[
+          PlayerWarOverview(
+            knowledge: widget.playerWorldKnowledge,
+            names: names,
+            language: _language,
+          ),
           const SizedBox(height: 24),
         ],
         Text(

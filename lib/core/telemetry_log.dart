@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'telemetry_catalog.dart';
+import 'player_world.dart';
 
 enum TelemetryValueStatus { value, missing, unsupported, invalid }
 
@@ -20,6 +21,7 @@ class TelemetryObservation {
     this.observationSchemaVersion = currentObservationSchemaVersion,
     this.receivedAt,
     this.logSource,
+    this.rawWorld,
   });
 
   final String gameDate;
@@ -28,7 +30,7 @@ class TelemetryObservation {
   final Map<String, double> values;
   final Set<String> invalidKeys;
 
-  /// Version of the mod's log format (V1, V2, or V3).
+  /// Version of the mod's log format (V1 or V2).
   final int schemaVersion;
 
   /// Version of the application's observation contract.
@@ -37,6 +39,24 @@ class TelemetryObservation {
   /// Time the application accepted this record; historical lines are not live.
   final DateTime? receivedAt;
   final String? logSource;
+
+  /// Untrusted source data; world widgets receive only a knowledge projection.
+  final RawPlayerWorld? rawWorld;
+
+  /// Numeric UI consumers never receive the untrusted world payload.
+  TelemetryObservation withoutRawWorld() => rawWorld == null
+      ? this
+      : TelemetryObservation(
+          gameDate: gameDate,
+          playerTag: playerTag,
+          manpower: manpower,
+          values: values,
+          invalidKeys: invalidKeys,
+          schemaVersion: schemaVersion,
+          observationSchemaVersion: observationSchemaVersion,
+          receivedAt: receivedAt,
+          logSource: logSource,
+        );
 
   String? get campaignId => null;
   String? get saveId => null;
@@ -148,13 +168,20 @@ class TelemetryLogPoll {
 }
 
 class _Frame {
-  _Frame(this.date, this.tag, this.parts, this.manpower, this.version);
+  _Frame(
+    this.date,
+    this.tag,
+    this.parts,
+    this.manpower, {
+    required this.version,
+    this.scopeId,
+    this.policyId,
+  });
   final String date, tag;
   final int parts, manpower, version;
+  final String? scopeId, policyId;
   final Map<int, Map<String, String>> data = {};
-  // V3 relations are counted to validate the envelope. Their payload is never
-  // exposed to the numeric dashboard or treated as player knowledge here.
-  final Set<String> relationTags = {};
+  final Map<String, RawPlayerRelation> relations = {};
 }
 
 Map<String, String>? _fields(String text) {
@@ -300,7 +327,7 @@ class TelemetryLogReader {
       _incomplete = true;
       return null;
     }
-    final version = int.parse(record[1]!);
+    final version = int.parse(record.group(1)!);
     _seenMod = true;
     if (!isValidTelemetryGameDate(prefix.group(1)!)) {
       _frame = null;
@@ -343,7 +370,15 @@ class TelemetryLogReader {
                 telemetryMetrics['manpower']!.domain.accepts(
                   manpower.toDouble(),
                 )
-            ? _Frame(date, tag, parts, manpower, version)
+            ? _Frame(
+                date,
+                tag,
+                parts,
+                manpower,
+                version: version,
+                scopeId: fields['world'],
+                policyId: fields['policy'],
+              )
             : null;
         _incomplete = true;
         return null;
@@ -380,16 +415,24 @@ class TelemetryLogReader {
             other == null ||
             !_tag.hasMatch(other) ||
             other == tag ||
-            frame.relationTags.length >= 10000 ||
-            !frame.relationTags.add(other)) {
+            frame.relations.containsKey(other) ||
+            frame.relations.length >= 10000) {
           _frame = null;
           _incomplete = true;
+          return null;
         }
+        frame.relations[other] = RawPlayerRelation(other, {
+          for (final entry in fields.entries)
+            if (entry.key != 'phase' &&
+                entry.key != 'tag' &&
+                entry.key != 'other')
+              entry.key: entry.value,
+        });
         return null;
       case 'end':
         final frame = _frame;
         _frame = null;
-        final enemies = version == 3
+        final opponents = version == 3
             ? _number(
                 fields['enemies'] ?? '',
                 telemetryMetrics['faction_members']!,
@@ -402,9 +445,9 @@ class TelemetryLogReader {
             frame.data.length != frame.parts ||
             fields.length != (version == 3 ? 4 : 3) ||
             (version == 3 &&
-                (enemies == null ||
-                    enemies > 10000 ||
-                    enemies != frame.relationTags.length))) {
+                (opponents == null ||
+                    opponents > 10000 ||
+                    opponents != frame.relations.length))) {
           _incomplete = true;
           return null;
         }
@@ -440,6 +483,13 @@ class TelemetryLogReader {
           values: Map.unmodifiable(values),
           invalidKeys: Set.unmodifiable(invalidKeys),
           schemaVersion: version,
+          rawWorld: version == 3
+              ? RawPlayerWorld(
+                  scopeId: frame.scopeId!,
+                  policyId: frame.policyId!,
+                  relations: frame.relations.values,
+                )
+              : null,
           receivedAt: DateTime.now(),
           logSource: logSource,
         );
@@ -591,8 +641,7 @@ class TelemetryLogReader {
           _latest = observation;
           _historical = initial;
           receivedNewLine = !initial;
-        } else if (trimmed.contains('HOI4_HELPER_V2') ||
-            trimmed.contains('HOI4_HELPER_V3')) {
+        } else if (RegExp(r'HOI4_HELPER_V[23]\|').hasMatch(trimmed)) {
           final complete = _readFramed(trimmed, logSource);
           if (complete != null) {
             _latest = complete;

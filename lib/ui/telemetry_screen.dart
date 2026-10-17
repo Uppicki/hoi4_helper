@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
 import '../core/telemetry_log.dart';
+import '../core/player_world.dart';
+import '../core/player_world_knowledge.dart';
 import '../core/telemetry_snapshot.dart';
 import 'world_screen.dart';
 
@@ -30,6 +32,10 @@ class TelemetryScreen extends StatefulWidget {
 class _TelemetryScreenState extends State<TelemetryScreen> {
   TelemetryLogReader? _reader;
   TelemetryLogPoll? _pollResult;
+  TelemetryObservation? _displayObservation;
+  PlayerWorldKnowledge _worldKnowledge = const PlayerWorldKnowledge.unavailable(
+    PlayerWorldAvailability.unavailable,
+  );
   Timer? _timer;
   bool _reading = false;
 
@@ -53,7 +59,12 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
     try {
       final result = await reader.poll();
       if (!mounted) return;
-      setState(() => _pollResult = result);
+      final knowledge = projectPlayerWorld(result.latest);
+      setState(() {
+        _pollResult = result;
+        _displayObservation = result.latest?.withoutRawWorld();
+        _worldKnowledge = knowledge;
+      });
     } on FileSystemException {
       // HOI4 can briefly lock game.log while writing.
     } finally {
@@ -69,7 +80,7 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final observation = _pollResult?.latest;
+    final observation = _displayObservation;
     return WorldScreen(
       snapshot: telemetryDisplaySnapshot(
         observation,
@@ -78,6 +89,7 @@ class _TelemetryScreenState extends State<TelemetryScreen> {
       telemetryMode: true,
       telemetryManpower: observation?.manpower,
       telemetry: observation,
+      playerWorldKnowledge: _worldKnowledge,
       telemetryStatus: _pollResult?.status ?? TelemetryStreamStatus.noLog,
       telemetryHistorical: _pollResult?.historical ?? false,
       language: widget.language,

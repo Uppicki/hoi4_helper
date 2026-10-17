@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:hoi4_helper/core/telemetry_log.dart';
 import 'package:hoi4_helper/core/telemetry_snapshot.dart';
+import 'package:hoi4_helper/core/player_world_knowledge.dart';
 
 /// Read-only smoke check against the user's installed mod, without dumping
 /// metric values or copying game logs into the repository.
@@ -20,8 +21,9 @@ Future<void> main() async {
     exitCode = 1;
     return;
   }
+  final knowledge = projectPlayerWorld(observation);
   final snapshot = telemetryDisplaySnapshot(
-    observation,
+    observation.withoutRawWorld(),
     readAt: DateTime.now(),
   );
   stdout.writeln(
@@ -34,6 +36,8 @@ Future<void> main() async {
       'status': result.status.name,
       'historical': result.historical,
       'displayDate': snapshot.gameDate?.toString(),
+      'worldStatus': knowledge.availability.name,
+      'opponents': knowledge.observation?.relations.length,
     }),
   );
   if (snapshot.gameDate == null) exitCode = 1;
