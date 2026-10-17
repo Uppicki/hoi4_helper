@@ -1,11 +1,11 @@
 # Generated from documented values of the installed game.
-# Read-only temp variables; no country or save variables are changed.
+# Only temp variables are changed. World scope: own war opponents.
 on_actions = {
   on_daily = {
     effect = {
       if = {
         limit = { is_ai = no }
-        log = "HOI4_HELPER_V2|phase=begin|tag=[ROOT.GetTag]|parts=19|manpower=[ROOT.GetManpower]"
+        log = "HOI4_HELPER_V3|phase=begin|tag=[ROOT.GetTag]|parts=19|manpower=[ROOT.GetManpower]|world=player_war_opponents|policy=own_war_participants_v1"
         set_temp_variable = { var = hh_0_0 value = political_power }
         set_temp_variable = { var = hh_0_1 value = political_power_daily }
         set_temp_variable = { var = hh_0_2 value = command_power }
@@ -18,7 +18,7 @@ on_actions = {
         set_temp_variable = { var = hh_0_9 value = party_popularity@communism }
         set_temp_variable = { var = hh_0_10 value = party_popularity@neutrality }
         set_temp_variable = { var = hh_0_11 value = manpower }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=0|political_power=[?hh_0_0|3]|political_power_daily=[?hh_0_1|3]|command_power=[?hh_0_2|3]|command_power_daily=[?hh_0_3|3]|stability=[?hh_0_4|3]|war_support=[?hh_0_5|3]|surrender_progress=[?hh_0_6|3]|party_democratic=[?hh_0_7|3]|party_fascism=[?hh_0_8|3]|party_communism=[?hh_0_9|3]|party_neutrality=[?hh_0_10|3]|manpower=[?hh_0_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=0|political_power=[?hh_0_0|3]|political_power_daily=[?hh_0_1|3]|command_power=[?hh_0_2|3]|command_power_daily=[?hh_0_3|3]|stability=[?hh_0_4|3]|war_support=[?hh_0_5|3]|surrender_progress=[?hh_0_6|3]|party_democratic=[?hh_0_7|3]|party_fascism=[?hh_0_8|3]|party_communism=[?hh_0_9|3]|party_neutrality=[?hh_0_10|3]|manpower=[?hh_0_11|0]"
         set_temp_variable = { var = hh_1_0 value = deployed_army_manpower_k }
         set_temp_variable = { var = hh_1_1 value = deployed_navy_manpower_k }
         set_temp_variable = { var = hh_1_2 value = deployed_airforce_manpower_k }
@@ -31,7 +31,7 @@ on_actions = {
         set_temp_variable = { var = hh_1_9 value = num_battalions }
         set_temp_variable = { var = hh_1_10 value = num_ships }
         set_temp_variable = { var = hh_1_11 value = num_deployed_planes }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=1|deployed_army=[?hh_1_0|3]|deployed_navy=[?hh_1_1|3]|deployed_air=[?hh_1_2|3]|deployed_total=[?hh_1_3|3]|training_manpower=[?hh_1_4|0]|garrison_need=[?hh_1_5|0]|casualties=[?hh_1_6|3]|max_manpower=[?hh_1_7|3]|divisions=[?hh_1_8|0]|battalions=[?hh_1_9|0]|ships=[?hh_1_10|0]|planes=[?hh_1_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=1|deployed_army=[?hh_1_0|3]|deployed_navy=[?hh_1_1|3]|deployed_air=[?hh_1_2|3]|deployed_total=[?hh_1_3|3]|training_manpower=[?hh_1_4|0]|garrison_need=[?hh_1_5|0]|casualties=[?hh_1_6|3]|max_manpower=[?hh_1_7|3]|divisions=[?hh_1_8|0]|battalions=[?hh_1_9|0]|ships=[?hh_1_10|0]|planes=[?hh_1_11|0]"
         set_temp_variable = { var = hh_2_0 value = army_experience }
         set_temp_variable = { var = hh_2_1 value = navy_experience }
         set_temp_variable = { var = hh_2_2 value = air_experience }
@@ -44,7 +44,7 @@ on_actions = {
         set_temp_variable = { var = hh_2_9 value = num_of_civilian_factories_available_for_projects }
         set_temp_variable = { var = hh_2_10 value = num_of_controlled_factories }
         set_temp_variable = { var = hh_2_11 value = num_of_owned_factories }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=2|army_xp=[?hh_2_0|3]|navy_xp=[?hh_2_1|3]|air_xp=[?hh_2_2|3]|civilian_factories=[?hh_2_3|0]|military_factories=[?hh_2_4|0]|dockyards=[?hh_2_5|0]|available_civ=[?hh_2_6|0]|available_mil=[?hh_2_7|0]|available_dock=[?hh_2_8|0]|project_civ=[?hh_2_9|0]|controlled_factories=[?hh_2_10|0]|owned_factories=[?hh_2_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=2|army_xp=[?hh_2_0|3]|navy_xp=[?hh_2_1|3]|air_xp=[?hh_2_2|3]|civilian_factories=[?hh_2_3|0]|military_factories=[?hh_2_4|0]|dockyards=[?hh_2_5|0]|available_civ=[?hh_2_6|0]|available_mil=[?hh_2_7|0]|available_dock=[?hh_2_8|0]|project_civ=[?hh_2_9|0]|controlled_factories=[?hh_2_10|0]|owned_factories=[?hh_2_11|0]"
         set_temp_variable = { var = hh_3_0 value = energy_ratio }
         set_temp_variable = { var = hh_3_1 value = fuel_k }
         set_temp_variable = { var = hh_3_2 value = max_fuel_k }
@@ -57,7 +57,7 @@ on_actions = {
         set_temp_variable = { var = hh_3_9 value = num_core_states }
         set_temp_variable = { var = hh_3_10 value = num_occupied_states }
         set_temp_variable = { var = hh_3_11 value = num_of_supply_nodes }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=3|energy_ratio=[?hh_3_0|3]|fuel=[?hh_3_1|3]|max_fuel=[?hh_3_2|3]|fuel_ratio=[?hh_3_3|3]|research_slots=[?hh_3_4|0]|researched_count=[?hh_3_5|0]|land_doctrine=[?hh_3_6|0]|owned_states=[?hh_3_7|0]|controlled_states=[?hh_3_8|0]|core_states=[?hh_3_9|0]|occupied_states=[?hh_3_10|0]|supply_nodes=[?hh_3_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=3|energy_ratio=[?hh_3_0|3]|fuel=[?hh_3_1|3]|max_fuel=[?hh_3_2|3]|fuel_ratio=[?hh_3_3|3]|research_slots=[?hh_3_4|0]|researched_count=[?hh_3_5|0]|land_doctrine=[?hh_3_6|0]|owned_states=[?hh_3_7|0]|controlled_states=[?hh_3_8|0]|core_states=[?hh_3_9|0]|occupied_states=[?hh_3_10|0]|supply_nodes=[?hh_3_11|0]"
         set_temp_variable = { var = hh_4_0 value = num_subjects }
         set_temp_variable = { var = hh_4_1 value = num_faction_members }
         set_temp_variable = { var = hh_4_2 value = agency_upgrade_number }
@@ -70,7 +70,7 @@ on_actions = {
         set_temp_variable = { var = hh_4_9 value = resource_consumed@oil }
         set_temp_variable = { var = hh_4_10 value = resource_imported@oil }
         set_temp_variable = { var = hh_4_11 value = resource_exported@oil }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=4|subjects=[?hh_4_0|0]|faction_members=[?hh_4_1|0]|agency_upgrades=[?hh_4_2|0]|operatives=[?hh_4_3|0]|operative_slots=[?hh_4_4|0]|free_operative_slots=[?hh_4_5|0]|encryption=[?hh_4_6|3]|res_oil_balance=[?hh_4_7|0]|res_oil_produced=[?hh_4_8|0]|res_oil_consumed=[?hh_4_9|0]|res_oil_imported=[?hh_4_10|0]|res_oil_exported=[?hh_4_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=4|subjects=[?hh_4_0|0]|faction_members=[?hh_4_1|0]|agency_upgrades=[?hh_4_2|0]|operatives=[?hh_4_3|0]|operative_slots=[?hh_4_4|0]|free_operative_slots=[?hh_4_5|0]|encryption=[?hh_4_6|3]|res_oil_balance=[?hh_4_7|0]|res_oil_produced=[?hh_4_8|0]|res_oil_consumed=[?hh_4_9|0]|res_oil_imported=[?hh_4_10|0]|res_oil_exported=[?hh_4_11|0]"
         set_temp_variable = { var = hh_5_0 value = resource@aluminium }
         set_temp_variable = { var = hh_5_1 value = resource_produced@aluminium }
         set_temp_variable = { var = hh_5_2 value = resource_consumed@aluminium }
@@ -83,7 +83,7 @@ on_actions = {
         set_temp_variable = { var = hh_5_9 value = resource_exported@rubber }
         set_temp_variable = { var = hh_5_10 value = resource@tungsten }
         set_temp_variable = { var = hh_5_11 value = resource_produced@tungsten }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=5|res_aluminium_balance=[?hh_5_0|0]|res_aluminium_produced=[?hh_5_1|0]|res_aluminium_consumed=[?hh_5_2|0]|res_aluminium_imported=[?hh_5_3|0]|res_aluminium_exported=[?hh_5_4|0]|res_rubber_balance=[?hh_5_5|0]|res_rubber_produced=[?hh_5_6|0]|res_rubber_consumed=[?hh_5_7|0]|res_rubber_imported=[?hh_5_8|0]|res_rubber_exported=[?hh_5_9|0]|res_tungsten_balance=[?hh_5_10|0]|res_tungsten_produced=[?hh_5_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=5|res_aluminium_balance=[?hh_5_0|0]|res_aluminium_produced=[?hh_5_1|0]|res_aluminium_consumed=[?hh_5_2|0]|res_aluminium_imported=[?hh_5_3|0]|res_aluminium_exported=[?hh_5_4|0]|res_rubber_balance=[?hh_5_5|0]|res_rubber_produced=[?hh_5_6|0]|res_rubber_consumed=[?hh_5_7|0]|res_rubber_imported=[?hh_5_8|0]|res_rubber_exported=[?hh_5_9|0]|res_tungsten_balance=[?hh_5_10|0]|res_tungsten_produced=[?hh_5_11|0]"
         set_temp_variable = { var = hh_6_0 value = resource_consumed@tungsten }
         set_temp_variable = { var = hh_6_1 value = resource_imported@tungsten }
         set_temp_variable = { var = hh_6_2 value = resource_exported@tungsten }
@@ -96,7 +96,7 @@ on_actions = {
         set_temp_variable = { var = hh_6_9 value = resource_produced@chromium }
         set_temp_variable = { var = hh_6_10 value = resource_consumed@chromium }
         set_temp_variable = { var = hh_6_11 value = resource_imported@chromium }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=6|res_tungsten_consumed=[?hh_6_0|0]|res_tungsten_imported=[?hh_6_1|0]|res_tungsten_exported=[?hh_6_2|0]|res_steel_balance=[?hh_6_3|0]|res_steel_produced=[?hh_6_4|0]|res_steel_consumed=[?hh_6_5|0]|res_steel_imported=[?hh_6_6|0]|res_steel_exported=[?hh_6_7|0]|res_chromium_balance=[?hh_6_8|0]|res_chromium_produced=[?hh_6_9|0]|res_chromium_consumed=[?hh_6_10|0]|res_chromium_imported=[?hh_6_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=6|res_tungsten_consumed=[?hh_6_0|0]|res_tungsten_imported=[?hh_6_1|0]|res_tungsten_exported=[?hh_6_2|0]|res_steel_balance=[?hh_6_3|0]|res_steel_produced=[?hh_6_4|0]|res_steel_consumed=[?hh_6_5|0]|res_steel_imported=[?hh_6_6|0]|res_steel_exported=[?hh_6_7|0]|res_chromium_balance=[?hh_6_8|0]|res_chromium_produced=[?hh_6_9|0]|res_chromium_consumed=[?hh_6_10|0]|res_chromium_imported=[?hh_6_11|0]"
         set_temp_variable = { var = hh_7_0 value = resource_exported@chromium }
         set_temp_variable = { var = hh_7_1 value = resource@coal }
         set_temp_variable = { var = hh_7_2 value = resource_produced@coal }
@@ -109,7 +109,7 @@ on_actions = {
         set_temp_variable = { var = hh_7_9 value = num_equipment@support_equipment }
         set_temp_variable = { var = hh_7_10 value = num_equipment_in_armies@support_equipment }
         set_temp_variable = { var = hh_7_11 value = num_target_equipment_in_armies@support_equipment }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=7|res_chromium_exported=[?hh_7_0|0]|res_coal_balance=[?hh_7_1|0]|res_coal_produced=[?hh_7_2|0]|res_coal_consumed=[?hh_7_3|0]|res_coal_imported=[?hh_7_4|0]|res_coal_exported=[?hh_7_5|0]|eq_infantry_equipment_stock=[?hh_7_6|0]|eq_infantry_equipment_field=[?hh_7_7|0]|eq_infantry_equipment_need=[?hh_7_8|0]|eq_support_equipment_stock=[?hh_7_9|0]|eq_support_equipment_field=[?hh_7_10|0]|eq_support_equipment_need=[?hh_7_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=7|res_chromium_exported=[?hh_7_0|0]|res_coal_balance=[?hh_7_1|0]|res_coal_produced=[?hh_7_2|0]|res_coal_consumed=[?hh_7_3|0]|res_coal_imported=[?hh_7_4|0]|res_coal_exported=[?hh_7_5|0]|eq_infantry_equipment_stock=[?hh_7_6|0]|eq_infantry_equipment_field=[?hh_7_7|0]|eq_infantry_equipment_need=[?hh_7_8|0]|eq_support_equipment_stock=[?hh_7_9|0]|eq_support_equipment_field=[?hh_7_10|0]|eq_support_equipment_need=[?hh_7_11|0]"
         set_temp_variable = { var = hh_8_0 value = num_equipment@artillery_equipment }
         set_temp_variable = { var = hh_8_1 value = num_equipment_in_armies@artillery_equipment }
         set_temp_variable = { var = hh_8_2 value = num_target_equipment_in_armies@artillery_equipment }
@@ -122,7 +122,7 @@ on_actions = {
         set_temp_variable = { var = hh_8_9 value = num_equipment@anti_air_equipment }
         set_temp_variable = { var = hh_8_10 value = num_equipment_in_armies@anti_air_equipment }
         set_temp_variable = { var = hh_8_11 value = num_target_equipment_in_armies@anti_air_equipment }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=8|eq_artillery_equipment_stock=[?hh_8_0|0]|eq_artillery_equipment_field=[?hh_8_1|0]|eq_artillery_equipment_need=[?hh_8_2|0]|eq_rocket_artillery_equipment_stock=[?hh_8_3|0]|eq_rocket_artillery_equipment_field=[?hh_8_4|0]|eq_rocket_artillery_equipment_need=[?hh_8_5|0]|eq_anti_tank_equipment_stock=[?hh_8_6|0]|eq_anti_tank_equipment_field=[?hh_8_7|0]|eq_anti_tank_equipment_need=[?hh_8_8|0]|eq_anti_air_equipment_stock=[?hh_8_9|0]|eq_anti_air_equipment_field=[?hh_8_10|0]|eq_anti_air_equipment_need=[?hh_8_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=8|eq_artillery_equipment_stock=[?hh_8_0|0]|eq_artillery_equipment_field=[?hh_8_1|0]|eq_artillery_equipment_need=[?hh_8_2|0]|eq_rocket_artillery_equipment_stock=[?hh_8_3|0]|eq_rocket_artillery_equipment_field=[?hh_8_4|0]|eq_rocket_artillery_equipment_need=[?hh_8_5|0]|eq_anti_tank_equipment_stock=[?hh_8_6|0]|eq_anti_tank_equipment_field=[?hh_8_7|0]|eq_anti_tank_equipment_need=[?hh_8_8|0]|eq_anti_air_equipment_stock=[?hh_8_9|0]|eq_anti_air_equipment_field=[?hh_8_10|0]|eq_anti_air_equipment_need=[?hh_8_11|0]"
         set_temp_variable = { var = hh_9_0 value = num_equipment@motorized_equipment }
         set_temp_variable = { var = hh_9_1 value = num_equipment_in_armies@motorized_equipment }
         set_temp_variable = { var = hh_9_2 value = num_target_equipment_in_armies@motorized_equipment }
@@ -135,7 +135,7 @@ on_actions = {
         set_temp_variable = { var = hh_9_9 value = num_equipment@amphibious_mechanized_equipment }
         set_temp_variable = { var = hh_9_10 value = num_equipment_in_armies@amphibious_mechanized_equipment }
         set_temp_variable = { var = hh_9_11 value = num_target_equipment_in_armies@amphibious_mechanized_equipment }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=9|eq_motorized_equipment_stock=[?hh_9_0|0]|eq_motorized_equipment_field=[?hh_9_1|0]|eq_motorized_equipment_need=[?hh_9_2|0]|eq_motorized_rocket_equipment_stock=[?hh_9_3|0]|eq_motorized_rocket_equipment_field=[?hh_9_4|0]|eq_motorized_rocket_equipment_need=[?hh_9_5|0]|eq_mechanized_equipment_stock=[?hh_9_6|0]|eq_mechanized_equipment_field=[?hh_9_7|0]|eq_mechanized_equipment_need=[?hh_9_8|0]|eq_amphibious_mechanized_equipment_stock=[?hh_9_9|0]|eq_amphibious_mechanized_equipment_field=[?hh_9_10|0]|eq_amphibious_mechanized_equipment_need=[?hh_9_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=9|eq_motorized_equipment_stock=[?hh_9_0|0]|eq_motorized_equipment_field=[?hh_9_1|0]|eq_motorized_equipment_need=[?hh_9_2|0]|eq_motorized_rocket_equipment_stock=[?hh_9_3|0]|eq_motorized_rocket_equipment_field=[?hh_9_4|0]|eq_motorized_rocket_equipment_need=[?hh_9_5|0]|eq_mechanized_equipment_stock=[?hh_9_6|0]|eq_mechanized_equipment_field=[?hh_9_7|0]|eq_mechanized_equipment_need=[?hh_9_8|0]|eq_amphibious_mechanized_equipment_stock=[?hh_9_9|0]|eq_amphibious_mechanized_equipment_field=[?hh_9_10|0]|eq_amphibious_mechanized_equipment_need=[?hh_9_11|0]"
         set_temp_variable = { var = hh_10_0 value = num_equipment@armored_car_equipment }
         set_temp_variable = { var = hh_10_1 value = num_equipment_in_armies@armored_car_equipment }
         set_temp_variable = { var = hh_10_2 value = num_target_equipment_in_armies@armored_car_equipment }
@@ -148,7 +148,7 @@ on_actions = {
         set_temp_variable = { var = hh_10_9 value = num_equipment@heavy_tank_chassis }
         set_temp_variable = { var = hh_10_10 value = num_equipment_in_armies@heavy_tank_chassis }
         set_temp_variable = { var = hh_10_11 value = num_target_equipment_in_armies@heavy_tank_chassis }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=10|eq_armored_car_equipment_stock=[?hh_10_0|0]|eq_armored_car_equipment_field=[?hh_10_1|0]|eq_armored_car_equipment_need=[?hh_10_2|0]|eq_light_tank_chassis_stock=[?hh_10_3|0]|eq_light_tank_chassis_field=[?hh_10_4|0]|eq_light_tank_chassis_need=[?hh_10_5|0]|eq_medium_tank_chassis_stock=[?hh_10_6|0]|eq_medium_tank_chassis_field=[?hh_10_7|0]|eq_medium_tank_chassis_need=[?hh_10_8|0]|eq_heavy_tank_chassis_stock=[?hh_10_9|0]|eq_heavy_tank_chassis_field=[?hh_10_10|0]|eq_heavy_tank_chassis_need=[?hh_10_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=10|eq_armored_car_equipment_stock=[?hh_10_0|0]|eq_armored_car_equipment_field=[?hh_10_1|0]|eq_armored_car_equipment_need=[?hh_10_2|0]|eq_light_tank_chassis_stock=[?hh_10_3|0]|eq_light_tank_chassis_field=[?hh_10_4|0]|eq_light_tank_chassis_need=[?hh_10_5|0]|eq_medium_tank_chassis_stock=[?hh_10_6|0]|eq_medium_tank_chassis_field=[?hh_10_7|0]|eq_medium_tank_chassis_need=[?hh_10_8|0]|eq_heavy_tank_chassis_stock=[?hh_10_9|0]|eq_heavy_tank_chassis_field=[?hh_10_10|0]|eq_heavy_tank_chassis_need=[?hh_10_11|0]"
         set_temp_variable = { var = hh_11_0 value = num_equipment@super_heavy_tank_chassis }
         set_temp_variable = { var = hh_11_1 value = num_equipment_in_armies@super_heavy_tank_chassis }
         set_temp_variable = { var = hh_11_2 value = num_target_equipment_in_armies@super_heavy_tank_chassis }
@@ -161,7 +161,7 @@ on_actions = {
         set_temp_variable = { var = hh_11_9 value = num_equipment@small_plane_airframe }
         set_temp_variable = { var = hh_11_10 value = num_equipment_in_armies@small_plane_airframe }
         set_temp_variable = { var = hh_11_11 value = num_target_equipment_in_armies@small_plane_airframe }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=11|eq_super_heavy_tank_chassis_stock=[?hh_11_0|0]|eq_super_heavy_tank_chassis_field=[?hh_11_1|0]|eq_super_heavy_tank_chassis_need=[?hh_11_2|0]|eq_modern_tank_chassis_stock=[?hh_11_3|0]|eq_modern_tank_chassis_field=[?hh_11_4|0]|eq_modern_tank_chassis_need=[?hh_11_5|0]|eq_amphibious_tank_chassis_stock=[?hh_11_6|0]|eq_amphibious_tank_chassis_field=[?hh_11_7|0]|eq_amphibious_tank_chassis_need=[?hh_11_8|0]|eq_small_plane_airframe_stock=[?hh_11_9|0]|eq_small_plane_airframe_field=[?hh_11_10|0]|eq_small_plane_airframe_need=[?hh_11_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=11|eq_super_heavy_tank_chassis_stock=[?hh_11_0|0]|eq_super_heavy_tank_chassis_field=[?hh_11_1|0]|eq_super_heavy_tank_chassis_need=[?hh_11_2|0]|eq_modern_tank_chassis_stock=[?hh_11_3|0]|eq_modern_tank_chassis_field=[?hh_11_4|0]|eq_modern_tank_chassis_need=[?hh_11_5|0]|eq_amphibious_tank_chassis_stock=[?hh_11_6|0]|eq_amphibious_tank_chassis_field=[?hh_11_7|0]|eq_amphibious_tank_chassis_need=[?hh_11_8|0]|eq_small_plane_airframe_stock=[?hh_11_9|0]|eq_small_plane_airframe_field=[?hh_11_10|0]|eq_small_plane_airframe_need=[?hh_11_11|0]"
         set_temp_variable = { var = hh_12_0 value = num_equipment@medium_plane_airframe }
         set_temp_variable = { var = hh_12_1 value = num_equipment_in_armies@medium_plane_airframe }
         set_temp_variable = { var = hh_12_2 value = num_target_equipment_in_armies@medium_plane_airframe }
@@ -174,7 +174,7 @@ on_actions = {
         set_temp_variable = { var = hh_12_9 value = num_equipment@small_plane_cas_airframe }
         set_temp_variable = { var = hh_12_10 value = num_equipment_in_armies@small_plane_cas_airframe }
         set_temp_variable = { var = hh_12_11 value = num_target_equipment_in_armies@small_plane_cas_airframe }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=12|eq_medium_plane_airframe_stock=[?hh_12_0|0]|eq_medium_plane_airframe_field=[?hh_12_1|0]|eq_medium_plane_airframe_need=[?hh_12_2|0]|eq_large_plane_airframe_stock=[?hh_12_3|0]|eq_large_plane_airframe_field=[?hh_12_4|0]|eq_large_plane_airframe_need=[?hh_12_5|0]|eq_cv_small_plane_airframe_stock=[?hh_12_6|0]|eq_cv_small_plane_airframe_field=[?hh_12_7|0]|eq_cv_small_plane_airframe_need=[?hh_12_8|0]|eq_small_plane_cas_airframe_stock=[?hh_12_9|0]|eq_small_plane_cas_airframe_field=[?hh_12_10|0]|eq_small_plane_cas_airframe_need=[?hh_12_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=12|eq_medium_plane_airframe_stock=[?hh_12_0|0]|eq_medium_plane_airframe_field=[?hh_12_1|0]|eq_medium_plane_airframe_need=[?hh_12_2|0]|eq_large_plane_airframe_stock=[?hh_12_3|0]|eq_large_plane_airframe_field=[?hh_12_4|0]|eq_large_plane_airframe_need=[?hh_12_5|0]|eq_cv_small_plane_airframe_stock=[?hh_12_6|0]|eq_cv_small_plane_airframe_field=[?hh_12_7|0]|eq_cv_small_plane_airframe_need=[?hh_12_8|0]|eq_small_plane_cas_airframe_stock=[?hh_12_9|0]|eq_small_plane_cas_airframe_field=[?hh_12_10|0]|eq_small_plane_cas_airframe_need=[?hh_12_11|0]"
         set_temp_variable = { var = hh_13_0 value = num_equipment@small_plane_naval_bomber_airframe }
         set_temp_variable = { var = hh_13_1 value = num_equipment_in_armies@small_plane_naval_bomber_airframe }
         set_temp_variable = { var = hh_13_2 value = num_target_equipment_in_armies@small_plane_naval_bomber_airframe }
@@ -187,7 +187,7 @@ on_actions = {
         set_temp_variable = { var = hh_13_9 value = num_equipment@transport_plane_equipment }
         set_temp_variable = { var = hh_13_10 value = num_equipment_in_armies@transport_plane_equipment }
         set_temp_variable = { var = hh_13_11 value = num_target_equipment_in_armies@transport_plane_equipment }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=13|eq_small_plane_naval_bomber_airframe_stock=[?hh_13_0|0]|eq_small_plane_naval_bomber_airframe_field=[?hh_13_1|0]|eq_small_plane_naval_bomber_airframe_need=[?hh_13_2|0]|eq_cv_small_plane_cas_airframe_stock=[?hh_13_3|0]|eq_cv_small_plane_cas_airframe_field=[?hh_13_4|0]|eq_cv_small_plane_cas_airframe_need=[?hh_13_5|0]|eq_cv_small_plane_naval_bomber_airframe_stock=[?hh_13_6|0]|eq_cv_small_plane_naval_bomber_airframe_field=[?hh_13_7|0]|eq_cv_small_plane_naval_bomber_airframe_need=[?hh_13_8|0]|eq_transport_plane_equipment_stock=[?hh_13_9|0]|eq_transport_plane_equipment_field=[?hh_13_10|0]|eq_transport_plane_equipment_need=[?hh_13_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=13|eq_small_plane_naval_bomber_airframe_stock=[?hh_13_0|0]|eq_small_plane_naval_bomber_airframe_field=[?hh_13_1|0]|eq_small_plane_naval_bomber_airframe_need=[?hh_13_2|0]|eq_cv_small_plane_cas_airframe_stock=[?hh_13_3|0]|eq_cv_small_plane_cas_airframe_field=[?hh_13_4|0]|eq_cv_small_plane_cas_airframe_need=[?hh_13_5|0]|eq_cv_small_plane_naval_bomber_airframe_stock=[?hh_13_6|0]|eq_cv_small_plane_naval_bomber_airframe_field=[?hh_13_7|0]|eq_cv_small_plane_naval_bomber_airframe_need=[?hh_13_8|0]|eq_transport_plane_equipment_stock=[?hh_13_9|0]|eq_transport_plane_equipment_field=[?hh_13_10|0]|eq_transport_plane_equipment_need=[?hh_13_11|0]"
         set_temp_variable = { var = hh_14_0 value = num_equipment@train_equipment }
         set_temp_variable = { var = hh_14_1 value = num_equipment_in_armies@train_equipment }
         set_temp_variable = { var = hh_14_2 value = num_target_equipment_in_armies@train_equipment }
@@ -200,7 +200,7 @@ on_actions = {
         set_temp_variable = { var = hh_14_9 value = num_equipment@floating_harbor_equipment }
         set_temp_variable = { var = hh_14_10 value = num_equipment_in_armies@floating_harbor_equipment }
         set_temp_variable = { var = hh_14_11 value = num_target_equipment_in_armies@floating_harbor_equipment }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=14|eq_train_equipment_stock=[?hh_14_0|0]|eq_train_equipment_field=[?hh_14_1|0]|eq_train_equipment_need=[?hh_14_2|0]|eq_railway_gun_equipment_stock=[?hh_14_3|0]|eq_railway_gun_equipment_field=[?hh_14_4|0]|eq_railway_gun_equipment_need=[?hh_14_5|0]|eq_convoy_stock=[?hh_14_6|0]|eq_convoy_field=[?hh_14_7|0]|eq_convoy_need=[?hh_14_8|0]|eq_floating_harbor_equipment_stock=[?hh_14_9|0]|eq_floating_harbor_equipment_field=[?hh_14_10|0]|eq_floating_harbor_equipment_need=[?hh_14_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=14|eq_train_equipment_stock=[?hh_14_0|0]|eq_train_equipment_field=[?hh_14_1|0]|eq_train_equipment_need=[?hh_14_2|0]|eq_railway_gun_equipment_stock=[?hh_14_3|0]|eq_railway_gun_equipment_field=[?hh_14_4|0]|eq_railway_gun_equipment_need=[?hh_14_5|0]|eq_convoy_stock=[?hh_14_6|0]|eq_convoy_field=[?hh_14_7|0]|eq_convoy_need=[?hh_14_8|0]|eq_floating_harbor_equipment_stock=[?hh_14_9|0]|eq_floating_harbor_equipment_field=[?hh_14_10|0]|eq_floating_harbor_equipment_need=[?hh_14_11|0]"
         set_temp_variable = { var = hh_15_0 value = total_constructed_civilian_factory }
         set_temp_variable = { var = hh_15_1 value = total_constructed_military_factory }
         set_temp_variable = { var = hh_15_2 value = total_constructed_dockyard }
@@ -213,7 +213,7 @@ on_actions = {
         set_temp_variable = { var = hh_15_9 value = total_constructed_naval_fort }
         set_temp_variable = { var = hh_15_10 value = total_constructed_port }
         set_temp_variable = { var = hh_15_11 value = total_constructed_radar }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=15|built_civilian_factory=[?hh_15_0|0]|built_military_factory=[?hh_15_1|0]|built_dockyard=[?hh_15_2|0]|built_infrastructure=[?hh_15_3|0]|built_refinery=[?hh_15_4|0]|built_fuel_silo=[?hh_15_5|0]|built_air_base=[?hh_15_6|0]|built_anti_air=[?hh_15_7|0]|built_land_fort=[?hh_15_8|0]|built_naval_fort=[?hh_15_9|0]|built_port=[?hh_15_10|0]|built_radar=[?hh_15_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=15|built_civilian_factory=[?hh_15_0|0]|built_military_factory=[?hh_15_1|0]|built_dockyard=[?hh_15_2|0]|built_infrastructure=[?hh_15_3|0]|built_refinery=[?hh_15_4|0]|built_fuel_silo=[?hh_15_5|0]|built_air_base=[?hh_15_6|0]|built_anti_air=[?hh_15_7|0]|built_land_fort=[?hh_15_8|0]|built_naval_fort=[?hh_15_9|0]|built_port=[?hh_15_10|0]|built_radar=[?hh_15_11|0]"
         set_temp_variable = { var = hh_16_0 value = total_constructed_supply_node }
         set_temp_variable = { var = hh_16_1 value = total_constructed_nuclear_reactor }
         set_temp_variable = { var = hh_16_2 value = total_constructed_rocket_site }
@@ -226,7 +226,7 @@ on_actions = {
         set_temp_variable = { var = hh_16_9 value = total_equipment_produced_motorized }
         set_temp_variable = { var = hh_16_10 value = total_equipment_produced_mechanized }
         set_temp_variable = { var = hh_16_11 value = total_equipment_produced_amphibious }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=16|built_supply_node=[?hh_16_0|0]|built_nuclear_reactor=[?hh_16_1|0]|built_rocket_site=[?hh_16_2|0]|produced_infantry=[?hh_16_3|0]|produced_support=[?hh_16_4|0]|produced_artillery=[?hh_16_5|0]|produced_anti_air=[?hh_16_6|0]|produced_anti_tank=[?hh_16_7|0]|produced_armor=[?hh_16_8|0]|produced_motorized=[?hh_16_9|0]|produced_mechanized=[?hh_16_10|0]|produced_amphibious=[?hh_16_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=16|built_supply_node=[?hh_16_0|0]|built_nuclear_reactor=[?hh_16_1|0]|built_rocket_site=[?hh_16_2|0]|produced_infantry=[?hh_16_3|0]|produced_support=[?hh_16_4|0]|produced_artillery=[?hh_16_5|0]|produced_anti_air=[?hh_16_6|0]|produced_anti_tank=[?hh_16_7|0]|produced_armor=[?hh_16_8|0]|produced_motorized=[?hh_16_9|0]|produced_mechanized=[?hh_16_10|0]|produced_amphibious=[?hh_16_11|0]"
         set_temp_variable = { var = hh_17_0 value = total_equipment_produced_fighter }
         set_temp_variable = { var = hh_17_1 value = total_equipment_produced_cas }
         set_temp_variable = { var = hh_17_2 value = total_equipment_produced_naval_bomber }
@@ -239,14 +239,24 @@ on_actions = {
         set_temp_variable = { var = hh_17_9 value = total_equipment_produced_capital_ship }
         set_temp_variable = { var = hh_17_10 value = total_equipment_produced_screen_ship }
         set_temp_variable = { var = hh_17_11 value = total_equipment_produced_submarine }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=17|produced_fighter=[?hh_17_0|0]|produced_cas=[?hh_17_1|0]|produced_naval_bomber=[?hh_17_2|0]|produced_tactical_bomber=[?hh_17_3|0]|produced_strategic_bomber=[?hh_17_4|0]|produced_heavy_fighter=[?hh_17_5|0]|produced_air_transport=[?hh_17_6|0]|produced_scout_plane=[?hh_17_7|0]|produced_carrier=[?hh_17_8|0]|produced_capital_ship=[?hh_17_9|0]|produced_screen_ship=[?hh_17_10|0]|produced_submarine=[?hh_17_11|0]"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=17|produced_fighter=[?hh_17_0|0]|produced_cas=[?hh_17_1|0]|produced_naval_bomber=[?hh_17_2|0]|produced_tactical_bomber=[?hh_17_3|0]|produced_strategic_bomber=[?hh_17_4|0]|produced_heavy_fighter=[?hh_17_5|0]|produced_air_transport=[?hh_17_6|0]|produced_scout_plane=[?hh_17_7|0]|produced_carrier=[?hh_17_8|0]|produced_capital_ship=[?hh_17_9|0]|produced_screen_ship=[?hh_17_10|0]|produced_submarine=[?hh_17_11|0]"
         set_temp_variable = { var = hh_18_0 value = total_equipment_produced_convoy }
         set_temp_variable = { var = hh_18_1 value = total_equipment_produced_train }
         set_temp_variable = { var = hh_18_2 value = total_equipment_produced_railway_gun }
         set_temp_variable = { var = hh_18_3 value = total_equipment_produced_floating_harbor }
         set_temp_variable = { var = hh_18_4 value = total_equipment_produced_missile }
-        log = "HOI4_HELPER_V2|phase=data|tag=[ROOT.GetTag]|part=18|produced_convoy=[?hh_18_0|0]|produced_train=[?hh_18_1|0]|produced_railway_gun=[?hh_18_2|0]|produced_floating_harbor=[?hh_18_3|0]|produced_missile=[?hh_18_4|0]"
-        log = "HOI4_HELPER_V2|phase=end|tag=[ROOT.GetTag]|parts=19"
+        log = "HOI4_HELPER_V3|phase=data|tag=[ROOT.GetTag]|part=18|produced_convoy=[?hh_18_0|0]|produced_train=[?hh_18_1|0]|produced_railway_gun=[?hh_18_2|0]|produced_floating_harbor=[?hh_18_3|0]|produced_missile=[?hh_18_4|0]"
+        set_temp_variable = { hh_war_opponents = 0 }
+        every_enemy_country = {
+          if = {
+            limit = { has_war_with = ROOT }
+            ROOT = {
+              add_to_temp_variable = { hh_war_opponents = 1 }
+            }
+            log = "HOI4_HELPER_V3|phase=relation|tag=[ROOT.GetTag]|other=[THIS.GetTag]|at_war=1"
+          }
+        }
+        log = "HOI4_HELPER_V3|phase=end|tag=[ROOT.GetTag]|parts=19|enemies=[?hh_war_opponents|0]"
       }
     }
   }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:math' as math;
 
 import 'telemetry_catalog.dart';
+import 'player_world.dart';
 
 enum TelemetryValueStatus { value, missing, unsupported, invalid }
 
@@ -20,6 +21,7 @@ class TelemetryObservation {
     this.observationSchemaVersion = currentObservationSchemaVersion,
     this.receivedAt,
     this.logSource,
+    this.rawWorld,
   });
 
   final String gameDate;
@@ -37,6 +39,24 @@ class TelemetryObservation {
   /// Time the application accepted this record; historical lines are not live.
   final DateTime? receivedAt;
   final String? logSource;
+
+  /// Untrusted source data; world widgets receive only a knowledge projection.
+  final RawPlayerWorld? rawWorld;
+
+  /// Numeric UI consumers never receive the untrusted world payload.
+  TelemetryObservation withoutRawWorld() => rawWorld == null
+      ? this
+      : TelemetryObservation(
+          gameDate: gameDate,
+          playerTag: playerTag,
+          manpower: manpower,
+          values: values,
+          invalidKeys: invalidKeys,
+          schemaVersion: schemaVersion,
+          observationSchemaVersion: observationSchemaVersion,
+          receivedAt: receivedAt,
+          logSource: logSource,
+        );
 
   String? get campaignId => null;
   String? get saveId => null;
@@ -148,10 +168,20 @@ class TelemetryLogPoll {
 }
 
 class _Frame {
-  _Frame(this.date, this.tag, this.parts, this.manpower);
+  _Frame(
+    this.date,
+    this.tag,
+    this.parts,
+    this.manpower, {
+    required this.version,
+    this.scopeId,
+    this.policyId,
+  });
   final String date, tag;
-  final int parts, manpower;
+  final int parts, manpower, version;
+  final String? scopeId, policyId;
   final Map<int, Map<String, String>> data = {};
+  final Map<String, RawPlayerRelation> relations = {};
 }
 
 Map<String, String>? _fields(String text) {
@@ -283,7 +313,7 @@ class TelemetryLogReader {
     return null;
   }
 
-  TelemetryObservation? _readV2(String line, String logSource) {
+  TelemetryObservation? _readFramed(String line, String logSource) {
     final prefix = _logPrefix.firstMatch(line);
     if (prefix == null) {
       _frame = null;
@@ -291,18 +321,20 @@ class TelemetryLogReader {
       return null;
     }
     final body = line.substring(prefix.end).trimRight();
-    if (!body.startsWith('HOI4_HELPER_V2|')) {
+    final record = RegExp(r'^HOI4_HELPER_V([23])\|').firstMatch(body);
+    if (record == null) {
       _frame = null;
       _incomplete = true;
       return null;
     }
+    final version = int.parse(record.group(1)!);
     _seenMod = true;
     if (!isValidTelemetryGameDate(prefix.group(1)!)) {
       _frame = null;
       _incomplete = true;
       return null;
     }
-    final fields = _fields(body.substring('HOI4_HELPER_V2|'.length));
+    final fields = _fields(body.substring(record.end));
     if (fields == null) {
       _frame = null;
       _incomplete = true;
@@ -311,6 +343,11 @@ class TelemetryLogReader {
     final date = prefix.group(1)!;
     final tag = fields['tag'];
     if (tag == null || !_tag.hasMatch(tag)) {
+      _frame = null;
+      _incomplete = true;
+      return null;
+    }
+    if (fields['phase'] != 'begin' && _frame?.version != version) {
       _frame = null;
       _incomplete = true;
       return null;
@@ -326,11 +363,22 @@ class TelemetryLogReader {
                 parts <= 100 &&
                 manpower != null &&
                 manpower >= 0 &&
-                fields.length == 4 &&
+                fields.length == (version == 3 ? 6 : 4) &&
+                (version != 3 ||
+                    ((fields['world']?.isNotEmpty ?? false) &&
+                        (fields['policy']?.isNotEmpty ?? false))) &&
                 telemetryMetrics['manpower']!.domain.accepts(
                   manpower.toDouble(),
                 )
-            ? _Frame(date, tag, parts, manpower)
+            ? _Frame(
+                date,
+                tag,
+                parts,
+                manpower,
+                version: version,
+                scopeId: fields['world'],
+                policyId: fields['policy'],
+              )
             : null;
         _incomplete = true;
         return null;
@@ -357,15 +405,49 @@ class TelemetryLogReader {
               entry.key: entry.value,
         };
         return null;
+      case 'relation':
+        final frame = _frame;
+        final other = fields['other'];
+        if (version != 3 ||
+            frame == null ||
+            frame.date != date ||
+            frame.tag != tag ||
+            other == null ||
+            !_tag.hasMatch(other) ||
+            other == tag ||
+            frame.relations.containsKey(other) ||
+            frame.relations.length >= 10000) {
+          _frame = null;
+          _incomplete = true;
+          return null;
+        }
+        frame.relations[other] = RawPlayerRelation(other, {
+          for (final entry in fields.entries)
+            if (entry.key != 'phase' &&
+                entry.key != 'tag' &&
+                entry.key != 'other')
+              entry.key: entry.value,
+        });
+        return null;
       case 'end':
         final frame = _frame;
         _frame = null;
+        final opponents = version == 3
+            ? _number(
+                fields['enemies'] ?? '',
+                telemetryMetrics['faction_members']!,
+              )
+            : null;
         if (frame == null ||
             frame.date != date ||
             frame.tag != tag ||
             int.tryParse(fields['parts'] ?? '') != frame.parts ||
             frame.data.length != frame.parts ||
-            fields.length != 3) {
+            fields.length != (version == 3 ? 4 : 3) ||
+            (version == 3 &&
+                (opponents == null ||
+                    opponents > 10000 ||
+                    opponents != frame.relations.length))) {
           _incomplete = true;
           return null;
         }
@@ -400,7 +482,14 @@ class TelemetryLogReader {
           manpower: frame.manpower,
           values: Map.unmodifiable(values),
           invalidKeys: Set.unmodifiable(invalidKeys),
-          schemaVersion: 2,
+          schemaVersion: version,
+          rawWorld: version == 3
+              ? RawPlayerWorld(
+                  scopeId: frame.scopeId!,
+                  policyId: frame.policyId!,
+                  relations: frame.relations.values,
+                )
+              : null,
           receivedAt: DateTime.now(),
           logSource: logSource,
         );
@@ -552,8 +641,8 @@ class TelemetryLogReader {
           _latest = observation;
           _historical = initial;
           receivedNewLine = !initial;
-        } else if (trimmed.contains('HOI4_HELPER_V2')) {
-          final complete = _readV2(trimmed, logSource);
+        } else if (RegExp(r'HOI4_HELPER_V[23]\|').hasMatch(trimmed)) {
+          final complete = _readFramed(trimmed, logSource);
           if (complete != null) {
             _latest = complete;
             _historical = initial;

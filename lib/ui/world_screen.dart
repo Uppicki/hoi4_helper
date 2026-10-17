@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
 import '../core/telemetry_log.dart';
+import '../core/player_world.dart';
+import 'player_war_overview.dart';
 import '../core/telemetry_snapshot.dart';
 import 'telemetry_details.dart';
 import '../core/world_state.dart';
@@ -21,6 +23,9 @@ class WorldScreen extends StatefulWidget {
     this.telemetry,
     this.telemetryStatus,
     this.telemetryHistorical = false,
+    this.playerWorldKnowledge = const PlayerWorldKnowledge.unavailable(
+      PlayerWorldAvailability.unavailable,
+    ),
   });
 
   final WorldStateSnapshot snapshot;
@@ -32,6 +37,7 @@ class WorldScreen extends StatefulWidget {
   final TelemetryObservation? telemetry;
   final TelemetryStreamStatus? telemetryStatus;
   final bool telemetryHistorical;
+  final PlayerWorldKnowledge playerWorldKnowledge;
 
   @override
   State<WorldScreen> createState() => _WorldScreenState();
@@ -145,6 +151,14 @@ class _WorldScreenState extends State<WorldScreen> {
         const SizedBox(height: 24),
         if (!widget.telemetryMode) ...[
           _worldSummary(world),
+          const SizedBox(height: 24),
+        ],
+        if (widget.telemetryMode) ...[
+          PlayerWarOverview(
+            knowledge: widget.playerWorldKnowledge,
+            names: names,
+            language: _language,
+          ),
           const SizedBox(height: 24),
         ],
         Text(
@@ -705,10 +719,10 @@ class _WorldScreenState extends State<WorldScreen> {
         Text(
           widget.telemetryMode
               ? _ui(
-                  widget.telemetry?.schemaVersion == 2
+                  (widget.telemetry?.schemaVersion ?? 0) >= 2
                       ? 'Баланс сырья, запасы и потребности снаряжения показаны ниже.'
                       : 'Остальные ресурсы мод пока не передаёт.',
-                  widget.telemetry?.schemaVersion == 2
+                  (widget.telemetry?.schemaVersion ?? 0) >= 2
                       ? 'Resource balance and equipment stockpiles are shown below.'
                       : 'The mod does not report the other resources yet.',
                 )
