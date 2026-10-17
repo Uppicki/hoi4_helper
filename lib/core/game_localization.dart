@@ -22,7 +22,23 @@ class GameLocalization {
 
   String name(String? code) {
     if (code == null || code.isEmpty) return '—';
-    return entries[code] ?? _fallback[language]?[code] ?? code;
+    return _resolve(code, <String>{}) ?? code;
+  }
+
+  static final _reference = RegExp(r'\$([A-Za-z0-9_.-]+)(?:\|[^$]*)?\$');
+
+  String? _resolve(String code, Set<String> visiting) {
+    final value = entries[code] ?? _fallback[language]?[code];
+    if (value == null || visiting.contains(code) || visiting.length >= 32) {
+      return null;
+    }
+    visiting.add(code);
+    final resolved = value.replaceAllMapped(
+      _reference,
+      (match) => _resolve(match[1]!, visiting) ?? match[0]!,
+    );
+    visiting.remove(code);
+    return resolved;
   }
 
   String country(String? tag, {String? ideology}) {

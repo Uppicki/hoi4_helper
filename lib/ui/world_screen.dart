@@ -367,6 +367,9 @@ class _WorldScreenState extends State<WorldScreen> {
                   ? const []
                   : player?.completedFocuses ?? const [],
               repository: widget.focusTreeRepository,
+              runtimeLogSource: widget.telemetryMode
+                  ? widget.telemetry?.logSource
+                  : null,
             ),
           ),
         ),

@@ -16,6 +16,7 @@ class FocusTreeScreen extends StatefulWidget {
     this.currentFocus,
     this.completedFocuses = const [],
     this.repository,
+    this.runtimeLogSource,
   });
 
   final GameLocalization names;
@@ -24,6 +25,7 @@ class FocusTreeScreen extends StatefulWidget {
   final String? currentFocus;
   final List<String> completedFocuses;
   final FocusTreeRepository? repository;
+  final String? runtimeLogSource;
 
   @override
   State<FocusTreeScreen> createState() => _FocusTreeScreenState();
@@ -39,10 +41,13 @@ class _FocusTreeScreenState extends State<FocusTreeScreen> {
   @override
   void initState() {
     super.initState();
-    _trees = (widget.repository ?? const FocusTreeRepository()).load(
-      treeId: widget.treeId,
-      countryTag: widget.countryTag,
-    );
+    _trees =
+        (widget.repository ??
+                FocusTreeRepository(
+                  gameRoot: widget.names.gameRoot,
+                  runtimeLogSource: widget.runtimeLogSource,
+                ))
+            .load(treeId: widget.treeId, countryTag: widget.countryTag);
   }
 
   @override
@@ -112,12 +117,31 @@ class _FocusTreeScreenState extends State<FocusTreeScreen> {
                             'Possible tree by country tag from game files. The source does not confirm the active tree or progress.',
                           )
                         : _ui(
-                            'Дерево из установленной игры по ID сохранения. Разблокировка, DLC и моды не проверены; общие и динамические ветки могут отсутствовать.',
-                            'Installed game tree matched by save ID. Unlocks, DLC and mods are not verified; shared and dynamic branches may be missing.',
+                            'Дерево из установленной игры по ID сохранения. Общие, динамические ветки и изменения модов могут отсутствовать.',
+                            'Installed game tree matched by save ID. Shared, dynamic branches and mod changes may be missing.',
                           ),
                     style: const TextStyle(
                       color: Color(0xFFAAB7AD),
                       fontSize: 12,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Tooltip(
+                    message: tree.dlcSourceFile ?? '',
+                    child: Text(
+                      tree.activeDlcCount == null
+                          ? _ui(
+                              'Состав DLC неизвестен. Непроверенные условия видимости отмечены «?».',
+                              'DLC configuration is unknown. Unverified visibility conditions are marked “?”.',
+                            )
+                          : _ui(
+                              'DLC последнего запуска: ${tree.activeDlcCount} (system.log). Скрыто по условиям: ${tree.focuses.length - tree.displayedFocuses.length}. Непроверенные условия отмечены «?».',
+                              'Last launch DLC: ${tree.activeDlcCount} (system.log). Hidden by conditions: ${tree.focuses.length - tree.displayedFocuses.length}. Unverified conditions are marked “?”.',
+                            ),
+                      style: const TextStyle(
+                        color: Color(0xFFAAB7AD),
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -135,11 +159,11 @@ class _FocusTreeScreenState extends State<FocusTreeScreen> {
               ),
             ),
             Expanded(
-              child: tree.focuses.isEmpty
+              child: tree.displayedFocuses.isEmpty
                   ? _message(
                       _ui(
-                        'В этом файле нет фокусов с координатами.',
-                        'This file has no focuses with coordinates.',
+                        'Нет фокусов для отображения с текущими условиями.',
+                        'No focuses to display under the current conditions.',
                       ),
                     )
                   : _FocusGraph(
@@ -199,6 +223,7 @@ class _FocusGraphState extends State<_FocusGraph> {
 
   @override
   Widget build(BuildContext context) {
+    final displayed = widget.tree.displayedFocuses;
     final byId = {for (final focus in widget.tree.focuses) focus.id: focus};
     final locations = <String, Offset>{};
     Offset position(String id, Set<String> visiting) {
@@ -213,15 +238,18 @@ class _FocusGraphState extends State<_FocusGraph> {
       return locations[id] = base + Offset(focus.x, focus.y);
     }
 
-    for (final focus in widget.tree.focuses) {
+    for (final focus in displayed) {
       position(focus.id, <String>{});
     }
-    final minX = locations.values.map((p) => p.dx).reduce(math.min);
-    final minY = locations.values.map((p) => p.dy).reduce(math.min);
-    final maxX = locations.values.map((p) => p.dx).reduce(math.max);
-    final maxY = locations.values.map((p) => p.dy).reduce(math.max);
+    final shownLocations = {
+      for (final focus in displayed) focus.id: locations[focus.id]!,
+    };
+    final minX = shownLocations.values.map((p) => p.dx).reduce(math.min);
+    final minY = shownLocations.values.map((p) => p.dy).reduce(math.min);
+    final maxX = shownLocations.values.map((p) => p.dx).reduce(math.max);
+    final maxY = shownLocations.values.map((p) => p.dy).reduce(math.max);
     final points = {
-      for (final entry in locations.entries)
+      for (final entry in shownLocations.entries)
         entry.key: Offset(
           24 + (entry.value.dx - minX) * _column,
           24 + (entry.value.dy - minY) * _row,
@@ -260,18 +288,18 @@ class _FocusGraphState extends State<_FocusGraph> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: CustomPaint(
-                      painter: _FocusEdges(widget.tree.focuses, points),
-                    ),
+                    child: CustomPaint(painter: _FocusEdges(displayed, points)),
                   ),
-                  for (final focus in widget.tree.focuses)
+                  for (final focus in displayed)
                     Positioned(
                       left: points[focus.id]!.dx,
                       top: points[focus.id]!.dy,
                       width: _nodeWidth,
                       height: _nodeHeight,
                       child: Tooltip(
-                        message: focus.id,
+                        message: focus.visibility == FocusVisibility.unknown
+                            ? '${focus.id}\n${widget.names.language == GameLanguage.russian ? 'Условия видимости ветки не проверены' : 'Branch visibility conditions are unverified'}'
+                            : focus.id,
                         child: Container(
                           key: ValueKey('focus-${focus.id}'),
                           alignment: Alignment.center,
@@ -292,12 +320,28 @@ class _FocusGraphState extends State<_FocusGraph> {
                             ),
                             borderRadius: BorderRadius.circular(9),
                           ),
-                          child: Text(
-                            widget.names.name(focus.id),
-                            textAlign: TextAlign.center,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontSize: 12),
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Text(
+                                  widget.names.name(focus.id),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                              ),
+                              if (focus.visibility == FocusVisibility.unknown)
+                                const Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Icon(
+                                    Icons.help_outline,
+                                    size: 12,
+                                    color: Color(0xFFD7B979),
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
                       ),

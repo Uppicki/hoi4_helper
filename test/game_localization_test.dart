@@ -4,6 +4,23 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hoi4_helper/core/game_localization.dart';
 
 void main() {
+  test('resolves nested localization references without looping on cycles', () {
+    const names = GameLocalization(GameLanguage.russian, {
+      'aviation_effort': 'Развитие авиации',
+      'ah_aviation_effort': r'$aviation_effort$',
+      'alias_chain': r'$ah_aviation_effort$ II',
+      'formatted': r'$aviation_effort|Y$',
+      'missing': r'$unknown_key$',
+      'cycle_a': r'$cycle_b$',
+      'cycle_b': r'$cycle_a$',
+    });
+    expect(names.name('ah_aviation_effort'), 'Развитие авиации');
+    expect(names.name('alias_chain'), 'Развитие авиации II');
+    expect(names.name('formatted'), 'Развитие авиации');
+    expect(names.name('missing'), r'$unknown_key$');
+    expect(names.name('cycle_a'), r'$cycle_a$');
+  });
+
   test(
     'Loads game labels in the selected language and keeps unknown codes',
     () async {
