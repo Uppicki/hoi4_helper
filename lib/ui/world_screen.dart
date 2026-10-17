@@ -21,8 +21,9 @@ class WorldScreen extends StatefulWidget {
     this.telemetryMode = false,
     this.telemetryManpower,
     this.telemetry,
-    this.telemetryReceivedWhileOpen = false,
     this.focusTreeRepository,
+    this.telemetryStatus,
+    this.telemetryHistorical = false,
   });
 
   final WorldStateSnapshot snapshot;
@@ -32,8 +33,9 @@ class WorldScreen extends StatefulWidget {
   final bool telemetryMode;
   final int? telemetryManpower;
   final TelemetryObservation? telemetry;
-  final bool telemetryReceivedWhileOpen;
   final FocusTreeRepository? focusTreeRepository;
+  final TelemetryStreamStatus? telemetryStatus;
+  final bool telemetryHistorical;
 
   @override
   State<WorldScreen> createState() => _WorldScreenState();
@@ -180,6 +182,35 @@ class _WorldScreenState extends State<WorldScreen> {
     );
   }
 
+  String _telemetryStatusText() {
+    final status =
+        widget.telemetryStatus ??
+        (widget.telemetry == null
+            ? TelemetryStreamStatus.noModRecords
+            : TelemetryStreamStatus.waitingNextDay);
+    switch (status) {
+      case TelemetryStreamStatus.noLog:
+        return _ui('Лог game.log не найден.', 'game.log was not found.');
+      case TelemetryStreamStatus.noModRecords:
+        return _ui('В логе нет записей мода.', 'No mod records in the log.');
+      case TelemetryStreamStatus.incompleteFrame:
+        return _ui(
+          'Неполный или повреждённый набор; ждём полный.',
+          'Incomplete or damaged frame; waiting for a complete one.',
+        );
+      case TelemetryStreamStatus.completeObservation:
+        return _ui(
+          'Получено полное наблюдение.',
+          'Complete observation received.',
+        );
+      case TelemetryStreamStatus.waitingNextDay:
+        return _ui(
+          'Ожидание следующего игрового дня.',
+          'Waiting for the next game day.',
+        );
+    }
+  }
+
   Widget _header(
     BuildContext context,
     GameLocalization names,
@@ -214,15 +245,34 @@ class _WorldScreenState extends State<WorldScreen> {
         if (widget.telemetryMode) ...[
           const SizedBox(height: 8),
           Text(
-            widget.telemetryReceivedWhileOpen
-                ? _ui(
-                    'Обновлено после открытия экрана. Данные поступают раз в игровой день.',
-                    'Updated after this screen opened. Data arrives once per game day.',
-                  )
-                : _ui(
-                    'Последняя запись журнала может относиться к прошлой загрузке.',
-                    'The latest log line may belong to an earlier game load.',
-                  ),
+            _telemetryStatusText(),
+            key: const Key('telemetry-stream-status'),
+            style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
+          ),
+          if (widget.telemetry case final observation?) ...[
+            const SizedBox(height: 4),
+            Text(
+              _ui(
+                'Последнее полное наблюдение: ${observation.gameDate} · получено ${_date(observation.receivedAt ?? widget.snapshot.readAt)}',
+                'Last complete observation: ${observation.gameDate} · received ${_date(observation.receivedAt ?? widget.snapshot.readAt)}',
+              ),
+              key: const Key('telemetry-last-complete'),
+              style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
+            ),
+            if (widget.telemetryHistorical)
+              Text(
+                _ui(
+                  'Запись найдена в журнале при открытии; текущая игровая сессия не подтверждена.',
+                  'Found in the log on opening; the current game session is unverified.',
+                ),
+                style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
+              ),
+          ],
+          Text(
+            _ui(
+              'Новые наблюдения появляются после следующего игрового дня; на паузе обновления нет.',
+              'New observations arrive after the next game day; there is no update while paused.',
+            ),
             style: const TextStyle(color: Color(0xFFAAB7AD), fontSize: 12),
           ),
         ],
@@ -791,10 +841,10 @@ class _WorldScreenState extends State<WorldScreen> {
         Text(
           widget.telemetryMode
               ? _ui(
-                  widget.telemetry?.schemaVersion == 2
+                  (widget.telemetry?.schemaVersion ?? 0) >= 2
                       ? 'Баланс сырья, запасы и потребности снаряжения показаны ниже.'
                       : 'Остальные ресурсы мод пока не передаёт.',
-                  widget.telemetry?.schemaVersion == 2
+                  (widget.telemetry?.schemaVersion ?? 0) >= 2
                       ? 'Resource balance and equipment stockpiles are shown below.'
                       : 'The mod does not report the other resources yet.',
                 )

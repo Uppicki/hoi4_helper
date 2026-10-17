@@ -1,11 +1,7 @@
-import 'dart:async';
-import 'dart:io';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 
 import '../core/game_localization.dart';
-import '../core/telemetry_log.dart';
 import 'app_router.dart';
 import 'app_sidebar.dart';
 import 'saves_controller.dart';
@@ -37,12 +33,6 @@ class _SavesScreenState extends State<SavesScreen> {
   double _swipeDistance = 0;
   GameLanguage _language = GameLanguage.russian;
   GameLocalization _names = const GameLocalization(GameLanguage.russian, {});
-  TelemetryLogReader? _telemetryReader;
-  TelemetryObservation? _telemetry;
-  Timer? _telemetryTimer;
-  bool _telemetryLive = false;
-  bool _telemetryReading = false;
-
   GameLocalizationRepository get _localizationRepository =>
       widget.localizationRepository ?? GameLocalizationRepository.shared;
 
@@ -64,39 +54,6 @@ class _SavesScreenState extends State<SavesScreen> {
     _names = GameLocalization(_language, const {});
     widget.language?.addListener(_onLanguageChanged);
     _loadLocalization();
-    _pollTelemetry();
-    _telemetryTimer = Timer.periodic(
-      const Duration(seconds: 1),
-      (_) => _pollTelemetry(),
-    );
-  }
-
-  Future<void> _pollTelemetry() async {
-    if (_telemetryReading) return;
-    if (_telemetryReader == null) {
-      final file = TelemetryLogReader.findDefaultLog();
-      if (file != null) _telemetryReader = TelemetryLogReader(file);
-    }
-    final reader = _telemetryReader;
-    if (reader == null) return;
-    _telemetryReading = true;
-    try {
-      final result = await reader.poll();
-      if (!mounted) return;
-      if (!identical(result.latest, _telemetry) ||
-          (result.receivedNewLine && !_telemetryLive)) {
-        setState(() {
-          _telemetry = result.latest;
-          _telemetryLive =
-              result.latest != null &&
-              (result.receivedNewLine || _telemetryLive);
-        });
-      }
-    } on FileSystemException {
-      // The game can briefly lock game.log while writing; retry next tick.
-    } finally {
-      _telemetryReading = false;
-    }
   }
 
   void _onLanguageChanged() {
@@ -119,7 +76,6 @@ class _SavesScreenState extends State<SavesScreen> {
   void dispose() {
     widget.language?.removeListener(_onLanguageChanged);
     pathInput.dispose();
-    _telemetryTimer?.cancel();
     if (widget.controller == null) controller.dispose();
     super.dispose();
   }
@@ -186,8 +142,6 @@ class _SavesScreenState extends State<SavesScreen> {
                           header(),
                           const SizedBox(height: 18),
                           folderCard(wide: true),
-                          const SizedBox(height: 12),
-                          telemetryCard(),
                           if (busy) ...[
                             const SizedBox(height: 8),
                             const LinearProgressIndicator(),
@@ -216,8 +170,6 @@ class _SavesScreenState extends State<SavesScreen> {
                           WorkModeSelector(controller: controller),
                           const SizedBox(height: 28),
                           folderCard(),
-                          const SizedBox(height: 12),
-                          telemetryCard(),
                           if (busy) ...[
                             const SizedBox(height: 12),
                             const LinearProgressIndicator(),
@@ -240,33 +192,6 @@ class _SavesScreenState extends State<SavesScreen> {
           },
         ),
       ),
-    ),
-  );
-
-  Widget telemetryCard() => panel(
-    Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Телеметрия мода · раз в игровой день',
-          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          _telemetry == null
-              ? 'Ожидание записи в game.log. Запустите игру с модом и пропустите день.'
-              : 'Страна: ${_telemetry!.playerTag} · дата: ${_telemetry!.gameDate} '
-                    '· людские резервы: ${_telemetry!.manpower}',
-          key: const Key('telemetry-status'),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _telemetryLive
-              ? 'Получено после открытия помощника. К выбранному сохранению не привязано.'
-              : 'Последняя запись журнала может относиться к прошлой загрузке. Для советов не используется.',
-          style: const TextStyle(color: Color(0xFFA6B1A9), fontSize: 12),
-        ),
-      ],
     ),
   );
 

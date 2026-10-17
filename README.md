@@ -25,6 +25,8 @@ flutter run -d windows
 
 ## Проверки
 
+`dart run tool/check_telemetry.dart` проверяет чтение текущего `game.log` установленного мода и выводит версию, дату и количество показателей без их значений. Числовой просмотр поддерживает V1/V2 и совместимые числовые части V3; данные отношений V3 в этой UI-ветке не отображаются.
+
 ```powershell
 dart format --output=none --set-exit-if-changed lib test
 flutter analyze
